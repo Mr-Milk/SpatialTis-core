@@ -1,5 +1,3 @@
-use std::fs;
-
 // opencv ccl algorithm, 4 connectivity
 // return area, centroid, eccentricity, border coords
 fn mask2cell() {}

@@ -4,12 +4,9 @@ mod utils;
 
 use dominance::dominance_analysis;
 
-#[cfg(test)]
-mod tests {
-    use crate::dominance::dominance_analysis;
+use linregress::{FormulaRegressionBuilder, RegressionDataBuilder};
 
-    #[test]
-    fn test_dominance() {
+fn main() {
         let Y = vec![1., 2. ,3. , 4., 5.];
         let X = vec![
             vec![5., 4., 3., 2., 1.],
@@ -19,5 +16,6 @@ mod tests {
         ];
         let result = dominance_analysis(Y, X);
 
+
+
     }
-}
