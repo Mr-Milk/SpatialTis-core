@@ -1,15 +1,45 @@
 [package]
-name = "spatialtis-core"
+name = "spatialtis_core"
 version = "0.1.0"
 authors = ["Milk <zym.zym1220@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[package.metadata.maturin]
+classifier = [
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python",
+    "Programming Language :: Rust",
+]
 
 [dependencies]
-linregress = "*"
-itertools = "*"
-fnv = "*"
+itertools = "0.10.1"
+rayon = "1.5.1"
+kiddo = "0.1.4"
+rstar = "0.8.3"
+delaunator = "0.2.1"
+geo = "0.18.0"
+counter = "0.5.2"
+anyhow = "1.0.41"
 
 [profile.dev]
 opt-level = 3
+
+[lib]
+name = "spatialtis_core"
+crate-type = ["cdylib"]
+
+[dependencies.pyo3]
+version = "0.13.1"
+features = ["extension-module"]
+
+[target.x86_64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-undefined",
+  "-C", "link-arg=dynamic_lookup",
+]
