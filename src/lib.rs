@@ -5,6 +5,7 @@ mod stat;
 mod quad_stats;
 mod neighbors_search;
 mod geo;
+mod spatial_autocorr;
 
 use std::collections::HashMap;
 use rand::seq::SliceRandom;
