@@ -17,7 +17,12 @@ neighborhood_analysis packages.
     - [x] Delaunay triangulation
 - [x] Search shape neighbors
     - [x] R-Tree (Search by expand or scale the shape)
-- [x] Correlation stat
+- [x] Cell-cell interactions (Permutation test)
+- [x] Spatial co-expression
+    - [x] Spatial enrichment (Permutation test)
+    - [x] Correlation
+        - [x] Pearson
+        - [x] Spearman
 - [ ] Quadratic stat
     - [ ] Rectangle
     - [ ] Hexagon
