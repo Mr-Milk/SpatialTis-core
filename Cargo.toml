@@ -19,6 +19,7 @@ classifier = [
 
 [dependencies]
 itertools = "0.10.1"
+rand = "0.8.3"
 rayon = "1.5.1"
 kiddo = "0.1.4"
 rstar = "0.8.3"
