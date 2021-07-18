@@ -27,5 +27,5 @@ neighborhood_analysis packages.
     - [ ] Rectangle
     - [ ] Hexagon
 - [ ] Spatial autocorrelation
-    - [ ] Moran's I
+    - [x] Moran's I
     - [ ] Geary's C

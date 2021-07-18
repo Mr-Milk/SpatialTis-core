@@ -1,1 +1,1 @@
-from .spatialtis_core import fast_corr
+from .spatialtis_core import points_neighbors, fast_corr, MoranI, neighbors_matrix

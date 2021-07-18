@@ -27,6 +27,9 @@ delaunator = "0.2.1"
 geo = "0.18.0"
 counter = "0.5.2"
 anyhow = "1.0.41"
+ndarray = "0.15.3"
+statrs = "0.15.0"
+numpy = "0.14.1"
 
 [profile.dev]
 opt-level = 3
@@ -36,7 +39,7 @@ name = "spatialtis_core"
 crate-type = ["cdylib"]
 
 [dependencies.pyo3]
-version = "0.13.1"
+version = "0.14"
 features = ["extension-module"]
 
 [target.x86_64-apple-darwin]

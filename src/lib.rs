@@ -16,6 +16,7 @@ use counter::Counter;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use pyo3::exceptions::PyTypeError;
+use numpy::{IntoPyArray, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use rayon::prelude::*;
 
 use crate::stat::{mean, std_dev};
@@ -24,6 +25,7 @@ use crate::neighbors_search::{points_neighbors_kdtree,
                        points_neighbors_triangulation,
                        init_bbox,
                        bbox_neighbors_rtree};
+use crate::spatial_autocorr::{spatial_weights_matrix, moran_i};
 use crate::utils::{count_neighbors, comb_count_neighbors, remove_rep_neighbors};
 
 #[pymodule]
@@ -39,6 +41,10 @@ fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
     // neighbors search
     m.add_wrapped(wrap_pyfunction!(points_neighbors))?;
     m.add_wrapped(wrap_pyfunction!(bbox_neighbors))?;
+
+    // spatial autocorr
+    m.add_wrapped(wrap_pyfunction!(neighbors_matrix))?;
+    m.add_wrapped(wrap_pyfunction!(MoranI))?;
 
     // boostrap for cell cell interactions
     m.add_class::<CellCombs>()?;
@@ -83,6 +89,28 @@ pub fn points2shapes(p: Vec<(f64, f64)>, method: Option<&str>, concavity: Option
     } else {
         concave(p, concavity)
     }
+}
+
+#[pyfunction]
+pub fn neighbors_matrix(py: Python,
+                        neighbors: Vec<Vec<usize>>,
+                        labels: Vec<usize>)
+                        -> &PyArray2<usize> {
+    spatial_weights_matrix(neighbors, &labels).into_pyarray(py)
+}
+
+#[pyfunction]
+pub fn MoranI<'py>(_py: Python<'py>,
+                   x: PyReadonlyArray1<f64>,
+                   w: PyReadonlyArray2<usize>,
+                   two_tailed: Option<bool>) -> (f64, f64) {
+    let x = x.as_array();
+    let w = w.as_array();
+    let two_tailed = match two_tailed {
+        Some(data) => data,
+        _ => true,
+    };
+    moran_i(x, w, two_tailed)
 }
 
 
