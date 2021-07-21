@@ -1,17 +1,30 @@
+use num_traits::FromPrimitive;
+
+pub fn floordiv<T>(a: T, b: T) -> T
+    where
+        T: FromPrimitive
+        + Clone
+        + std::ops::Rem<Output=T>
+        + std::ops::Sub<Output=T>
+        + std::ops::Div<Output=T>
+{
+    (a.clone() - (a % b.clone())) / b
+}
+
 // Source code modified from simple_ml crate
 
 pub fn mean<T>(list: &Vec<T>) -> f64
-where
-    T: std::iter::Sum<T>
-        + std::ops::Div<Output = T>
+    where
+        T: std::iter::Sum<T>
+        + std::ops::Div<Output=T>
         + Copy
         + std::str::FromStr
         + std::string::ToString
-        + std::ops::Add<T, Output = T>
+        + std::ops::Add<T, Output=T>
         + std::fmt::Debug
         + std::fmt::Display
         + std::str::FromStr,
-    <T as std::str::FromStr>::Err: std::fmt::Debug,
+        <T as std::str::FromStr>::Err: std::fmt::Debug,
 {
     // https://machinelearningmastery.com/implement-simple-linear-regression-scratch-python/
     let zero: T = "0".parse().unwrap();
@@ -24,19 +37,19 @@ where
 }
 
 pub fn std_dev<T>(list1: &Vec<T>) -> f64
-where
-    T: std::iter::Sum<T>
-        + std::ops::Div<Output = T>
+    where
+        T: std::iter::Sum<T>
+        + std::ops::Div<Output=T>
         + std::fmt::Debug
         + std::fmt::Display
         + std::ops::Add
         + std::marker::Copy
-        + std::ops::Add<T, Output = T>
-        + std::ops::Sub<T, Output = T>
-        + std::ops::Mul<T, Output = T>
+        + std::ops::Add<T, Output=T>
+        + std::ops::Sub<T, Output=T>
+        + std::ops::Mul<T, Output=T>
         + std::string::ToString
         + std::str::FromStr,
-    <T as std::str::FromStr>::Err: std::fmt::Debug,
+        <T as std::str::FromStr>::Err: std::fmt::Debug,
 {
     let mu: T = mean(list1).to_string().parse().unwrap();
     let square_of_difference = list1.iter().map(|a| (*a - mu) * (*a - mu)).collect();
@@ -45,19 +58,19 @@ where
 }
 
 pub fn covariance<T>(list1: &Vec<T>, list2: &Vec<T>) -> f64
-where
-    T: std::iter::Sum<T>
-        + std::ops::Div<Output = T>
+    where
+        T: std::iter::Sum<T>
+        + std::ops::Div<Output=T>
         + std::fmt::Debug
         + std::fmt::Display
         + std::ops::Add
         + std::marker::Copy
-        + std::ops::Add<T, Output = T>
-        + std::ops::Sub<T, Output = T>
-        + std::ops::Mul<T, Output = T>
+        + std::ops::Add<T, Output=T>
+        + std::ops::Sub<T, Output=T>
+        + std::ops::Mul<T, Output=T>
         + std::string::ToString
         + std::str::FromStr,
-    <T as std::str::FromStr>::Err: std::fmt::Debug,
+        <T as std::str::FromStr>::Err: std::fmt::Debug,
 {
     // https://machinelearningmastery.com/implement-simple-linear-regression-scratch-python/
     let mu1 = mean(list1);
@@ -73,8 +86,8 @@ where
 }
 
 pub fn how_many_and_where_vector<T>(list: &Vec<T>, number: T) -> Vec<usize>
-where
-    T: std::cmp::PartialEq + std::fmt::Debug + Copy,
+    where
+        T: std::cmp::PartialEq + std::fmt::Debug + Copy,
 {
     /*
     Returns the positions of the number to be found in a vector
@@ -89,20 +102,20 @@ where
 }
 
 pub fn spearman_rank<T>(list1: &Vec<T>) -> Vec<(T, f64)>
-where
-    T: std::iter::Sum<T>
-        + std::ops::Div<Output = T>
+    where
+        T: std::iter::Sum<T>
+        + std::ops::Div<Output=T>
         + std::fmt::Debug
         + std::fmt::Display
         + std::ops::Add
         + std::marker::Copy
         + std::cmp::PartialOrd
-        + std::ops::Add<T, Output = T>
-        + std::ops::Sub<T, Output = T>
-        + std::ops::Mul<T, Output = T>
+        + std::ops::Add<T, Output=T>
+        + std::ops::Sub<T, Output=T>
+        + std::ops::Mul<T, Output=T>
         + std::string::ToString
         + std::str::FromStr,
-    <T as std::str::FromStr>::Err: std::fmt::Debug,
+        <T as std::str::FromStr>::Err: std::fmt::Debug,
 {
     /*
     Returns ranking of each value in ascending order with thier spearman rank in a vector of tuple
@@ -110,10 +123,10 @@ where
     // https://en.wikipedia.org/wiki/Spearman%27s_rank_correlation_coefficient
     let mut sorted = list1.clone();
     sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let mut map: Vec<(_, _)> = vec![];
-    for (n, i) in sorted.iter().enumerate() {
-        map.push(((n + 1), *i));
-    }
+    // let mut map: Vec<(_, _)> = vec![];
+    // for (n, i) in sorted.iter().enumerate() {
+    //     map.push(((n + 1), *i));
+    // }
     // repeating values
     let mut repeats: Vec<_> = vec![];
     for (n, i) in sorted.iter().enumerate() {
@@ -135,20 +148,20 @@ where
 }
 
 pub fn correlation<T>(list1: &Vec<T>, list2: &Vec<T>, name: &str) -> f64
-where
-    T: std::iter::Sum<T>
-        + std::ops::Div<Output = T>
+    where
+        T: std::iter::Sum<T>
+        + std::ops::Div<Output=T>
         + std::fmt::Debug
         + std::fmt::Display
         + std::ops::Add
         + std::cmp::PartialOrd
         + std::marker::Copy
-        + std::ops::Add<T, Output = T>
-        + std::ops::Sub<T, Output = T>
-        + std::ops::Mul<T, Output = T>
+        + std::ops::Add<T, Output=T>
+        + std::ops::Sub<T, Output=T>
+        + std::ops::Mul<T, Output=T>
         + std::string::ToString
         + std::str::FromStr,
-    <T as std::str::FromStr>::Err: std::fmt::Debug,
+        <T as std::str::FromStr>::Err: std::fmt::Debug,
 {
     /*
     Correlation

@@ -1,9 +1,8 @@
 use geo::algorithm::bounding_rect::BoundingRect;
-use geo::LineString;
 use geo::algorithm::concave_hull::ConcaveHull;
 use geo::algorithm::convex_hull::ConvexHull;
 use geo::algorithm::coords_iter::CoordsIter;
-
+use geo::LineString;
 
 pub fn point2bbox(p: Vec<(f64, f64)>) -> (f64, f64, f64, f64) {
     let line_string: LineString<f64> = p.into();

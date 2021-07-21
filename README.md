@@ -24,8 +24,8 @@ neighborhood_analysis packages.
         - [x] Pearson
         - [x] Spearman
 - [ ] Quadratic stat
-    - [ ] Rectangle
+    - [x] Rectangle
     - [ ] Hexagon
-- [ ] Spatial autocorrelation
+- [x] Spatial autocorrelation
     - [x] Moran's I
-    - [ ] Geary's C
+    - [x] Geary's C

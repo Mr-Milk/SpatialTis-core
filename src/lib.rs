@@ -1,3 +1,23 @@
+use std::collections::HashMap;
+
+use counter::Counter;
+use itertools::Itertools;
+use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
+use pyo3::exceptions::PyTypeError;
+use pyo3::prelude::*;
+use rand::seq::SliceRandom;
+use rand::thread_rng;
+use rayon::prelude::*;
+
+use crate::geo::{concave, convex, point2bbox};
+use crate::neighbors_search::{bbox_neighbors_rtree,
+                              init_bbox,
+                              points_neighbors_kdtree,
+                              points_neighbors_triangulation};
+use crate::spatial_autocorr::{geary_c_index, moran_i_index, spatial_weights_matrix};
+use crate::stat::{mean, std_dev};
+use crate::utils::{comb_count_neighbors, count_neighbors, py_kwarg, remove_rep_neighbors};
+
 mod preprocessing;
 mod utils;
 mod corr;
@@ -6,31 +26,13 @@ mod quad_stats;
 mod neighbors_search;
 mod geo;
 mod spatial_autocorr;
-
-use std::collections::HashMap;
-use rand::seq::SliceRandom;
-use rand::thread_rng;
-use itertools::Itertools;
-use counter::Counter;
-
-use pyo3::prelude::*;
-use pyo3::wrap_pyfunction;
-use pyo3::exceptions::PyTypeError;
-use numpy::{IntoPyArray, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
-use rayon::prelude::*;
-
-use crate::stat::{mean, std_dev};
-use crate::geo::{point2bbox, convex, concave};
-use crate::neighbors_search::{points_neighbors_kdtree,
-                       points_neighbors_triangulation,
-                       init_bbox,
-                       bbox_neighbors_rtree};
-use crate::spatial_autocorr::{spatial_weights_matrix, moran_i};
-use crate::utils::{count_neighbors, comb_count_neighbors, remove_rep_neighbors};
+mod distribution_index;
+mod hotspot;
 
 #[pymodule]
 fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
     // geometry processing
+    m.add_wrapped(wrap_pyfunction!(multi_points_bbox))?;
     m.add_wrapped(wrap_pyfunction!(points2bbox))?;
     m.add_wrapped(wrap_pyfunction!(points2shapes))?;
 
@@ -44,7 +46,8 @@ fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
 
     // spatial autocorr
     m.add_wrapped(wrap_pyfunction!(neighbors_matrix))?;
-    m.add_wrapped(wrap_pyfunction!(MoranI))?;
+    m.add_wrapped(wrap_pyfunction!(moran_i))?;
+    m.add_wrapped(wrap_pyfunction!(geary_c))?;
 
     // boostrap for cell cell interactions
     m.add_class::<CellCombs>()?;
@@ -52,7 +55,7 @@ fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
     Ok(())
 }
 
-/// get_bbox(points_collections)
+/// points2bbox(points_collections)
 /// --
 ///
 /// A utility function to return minimum bounding box list of polygons
@@ -64,25 +67,28 @@ fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
 ///     A list of bounding box
 #[pyfunction]
 pub fn points2bbox(points_collections: Vec<Vec<(f64, f64)>>)
-    -> Vec<(f64, f64, f64, f64)> {
+                   -> Vec<(f64, f64, f64, f64)> {
     points_collections.into_iter()
         .map(|p| point2bbox(p))
         .collect()
 }
 
 #[pyfunction]
+pub fn multi_points_bbox(points: Vec<(f64, f64)>)
+                         -> (f64, f64, f64, f64) {
+    point2bbox(points)
+}
+
+#[pyfunction]
 pub fn points2shapes(p: Vec<(f64, f64)>, method: Option<&str>, concavity: Option<f64>)
-    -> Vec<(f64, f64)> {
+                     -> Vec<(f64, f64)> {
     let method = match method {
         Some("convex") => "convex",
         Some("concave") => "concave",
         _ => "convex",
     };
 
-    let concavity = match concavity {
-        Some(data) => data,
-        None => 1.5,
-    };
+    let concavity = py_kwarg(concavity, 1.5);
 
     if method == "convex" {
         convex(p)
@@ -100,61 +106,45 @@ pub fn neighbors_matrix(py: Python,
 }
 
 #[pyfunction]
-pub fn MoranI<'py>(_py: Python<'py>,
-                   x: PyReadonlyArray1<f64>,
-                   w: PyReadonlyArray2<usize>,
-                   two_tailed: Option<bool>) -> (f64, f64) {
+pub fn moran_i<'py>(_py: Python<'py>,
+                    x: PyReadonlyArray1<f64>,
+                    w: PyReadonlyArray2<usize>,
+                    two_tailed: Option<bool>)
+                    -> (f64, f64) {
     let x = x.as_array();
     let w = w.as_array();
-    let two_tailed = match two_tailed {
-        Some(data) => data,
-        _ => true,
-    };
-    moran_i(x, w, two_tailed)
+    let two_tailed = py_kwarg(two_tailed, true);
+
+    moran_i_index(x, w, two_tailed)
 }
 
 
 #[pyfunction]
-fn fast_corr(py: Python, labels: PyObject, data1: PyObject, data2: PyObject, method: Option<&str>)
-             -> PyResult<PyObject> {
-    let py_labels: Vec<&str> = match labels.extract(py) {
-            Ok(data) => data,
-            _ => {
-                return Err(PyTypeError::new_err(
-                    "Can't resolve `labels`, should be list of string.",
-                ));
-            }
-        };
+pub fn geary_c<'py>(_py: Python<'py>,
+                    x: PyReadonlyArray1<f64>,
+                    w: PyReadonlyArray2<usize>,
+)
+                    -> (f64, f64) {
+    let x = x.as_array();
+    let w = w.as_array();
 
-    let used_method: &str = match method {
+    geary_c_index(x, w)
+}
+
+
+#[pyfunction]
+fn fast_corr<'py>(py: Python<'py>, data1: PyReadonlyArray2<f64>, data2: PyReadonlyArray2<f64>, method: Option<&str>)
+                  -> &'py PyArray1<f64> {
+    let method: &str = match method {
         Some("pearson") => "p",
         Some("spearman") => "s",
         _ => "s",
     };
 
-    let py_data1: Vec<Vec<f64>> = match data1.extract(py) {
-            Ok(data) => data,
-            _ => {
-                return Err(PyTypeError::new_err(
-                    "Input data should be float",
-                ));
-            }
-        };
+    let data1 = data1.as_array();
+    let data2 = data2.as_array();
 
-    let py_data2: Vec<Vec<f64>> = match data2.extract(py) {
-            Ok(data) => data,
-            _ => {
-                return Err(PyTypeError::new_err(
-                    "Input data should be float",
-                ));
-            }
-        };
-
-    let result: Vec<(&str, &str, f64)> = corr::cross_corr(&py_labels, &py_data1, &py_data2, used_method);
-
-    Ok(
-        result.to_object(py)
-    )
+    corr::cross_corr(data1, data2, method).to_pyarray(py)
 }
 
 
@@ -163,54 +153,58 @@ fn points_neighbors(points: Vec<(f64, f64)>,
                     labels: Option<Vec<usize>>,
                     method: Option<&str>,
                     r: Option<f64>,
-                    k: Option<usize>,)
-    -> Vec<Vec<usize>> {
-    let labels = match labels {
-            Some(data) => data,
-            None => (0..points.len()).into_iter().collect(),
-        };
+                    k: Option<usize>, )
+                    -> Vec<Vec<usize>> {
+    // let labels = match labels {
+    //     Some(data) => data,
+    //     None => (0..points.len()).into_iter().collect(),
+    // };
 
-        let r = match r {
-            Some(data) => data,
-            None => -1.0, // if negative, will no perform radius search
-        };
+    let labels = py_kwarg(labels, (0..points.len()).into_iter().collect());
+    let r = py_kwarg(r, -1.0);
+    let mut k = py_kwarg(k, 0);
+    // let r = match r {
+    //     Some(data) => data,
+    //     None => -1.0, // if negative, will no perform radius search
+    // };
 
-        let mut k = match k {
-            Some(data) => data,
-            None => 0, // if 0, will no perform knn search
-        };
+    // let mut k = match k {
+    //     Some(data) => data,
+    //     None => 0, // if 0, will no perform knn search
+    // };
 
     let method = match method {
         Some("kdtree") => "kdtree",
         Some("delaunay") => "delaunay",
-        _ => { k=5; "kdtree"} // default will search for knn = 5
+        _ => {
+            k = 5;
+            "kdtree"
+        } // default will search for knn = 5
     };
 
-        if (r < 0.0) & (k == 0) {
-            panic!("Need either `r` or `k` to run the analysis.")
-        }
+    if (r < 0.0) & (k == 0) {
+        panic!("Need either `r` or `k` to run the analysis.")
+    }
 
     if method == "kdtree" {
         points_neighbors_kdtree(points, labels, r, k)
     } else {
         points_neighbors_triangulation(points, labels)
     }
-
 }
-
 
 
 #[pyfunction]
 fn bbox_neighbors(bbox: Vec<(f64, f64, f64, f64)>,
-labels: Option<Vec<usize>>,
-    expand: Option<f64>,
-    scale: Option<f64>,
+                  labels: Option<Vec<usize>>,
+                  expand: Option<f64>,
+                  scale: Option<f64>,
 )
-    -> Vec<Vec<usize>> {
+                  -> Vec<Vec<usize>> {
     let labels = match labels {
-            Some(data) => data,
-            _ => (0..bbox.len()).into_iter().collect(),
-        };
+        Some(data) => data,
+        _ => (0..bbox.len()).into_iter().collect(),
+    };
 
     let expand = match expand {
         Some(data) => data,
@@ -252,7 +246,6 @@ pub fn neighbor_components(neighbors: HashMap<usize, Vec<usize>>, types: HashMap
 
     (cent_order, uni_types, result)
 }
-
 
 
 /// comb_bootstrap(x_status, y_status, neighbors, times=500, ignore_self=False)
@@ -362,7 +355,7 @@ unsafe impl Send for CellCombs {}
 impl CellCombs {
     #[new]
     fn new(py: Python, types: PyObject, order: Option<bool>)
-        -> PyResult<Self> {
+           -> PyResult<Self> {
         let types_data: Vec<&str> = match types.extract(py) {
             Ok(data) => data,
             Err(_) => {

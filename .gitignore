@@ -3,3 +3,6 @@
 
 /target
 **/*.rs.bk
+
+.pyd
+__pycache__

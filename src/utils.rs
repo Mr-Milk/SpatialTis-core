@@ -1,7 +1,15 @@
-use counter::Counter;
 use std::collections::HashMap;
 
+use counter::Counter;
+
 use crate::stat::mean;
+
+pub fn py_kwarg<T>(arg: Option<T>, default_value: T) -> T {
+    match arg {
+        Some(data) => data,
+        None => default_value,
+    }
+}
 
 pub fn count_neighbors<'a>(
     types: &Vec<&'a str>,
@@ -43,7 +51,7 @@ pub fn count_neighbors<'a>(
 }
 
 pub fn comb_count_neighbors(x: &Vec<bool>, y: &Vec<bool>, neighbors: &Vec<Vec<usize>>)
-    -> usize {
+                            -> usize {
     let mut count: usize = 0;
 
     for (k, v) in neighbors.iter().enumerate() {
@@ -59,7 +67,7 @@ pub fn comb_count_neighbors(x: &Vec<bool>, y: &Vec<bool>, neighbors: &Vec<Vec<us
 }
 
 pub fn remove_rep_neighbors(rep_neighbors: Vec<Vec<usize>>, ignore_self: bool)
-    -> Vec<Vec<usize>> {
+                            -> Vec<Vec<usize>> {
     let mut neighbors = vec![];
     for (i, neighs) in rep_neighbors.iter().enumerate() {
         let mut new_neighs = vec![];

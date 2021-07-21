@@ -1,14 +1,13 @@
-use kiddo::KdTree;
-use kiddo::distance::squared_euclidean;
 use delaunator::{Point, triangulate};
-use rstar::{RTreeObject, AABB, RTree};
-
+use kiddo::distance::squared_euclidean;
+use kiddo::KdTree;
+use rstar::{AABB, RTree, RTreeObject};
 
 pub fn points_neighbors_kdtree(points: Vec<(f64, f64)>,
-                            labels: Vec<usize>,
-                            r: f64,
-                            k: usize,
-)-> Vec<Vec<usize>>
+                               labels: Vec<usize>,
+                               r: f64,
+                               k: usize,
+) -> Vec<Vec<usize>>
 {
     let tree = kdtree_builder(&points, &labels);
     let neighbors: Vec<Vec<usize>> = points.iter().map(|p| {
@@ -24,22 +23,21 @@ pub fn points_neighbors_kdtree(points: Vec<(f64, f64)>,
     }).collect();
 
     neighbors
-
 }
 
 
 pub fn points_neighbors_triangulation(points: Vec<(f64, f64)>, labels: Vec<usize>) -> Vec<Vec<usize>>
 {
-    let points: Vec<Point> = points.into_iter().map(|p| Point{x: p.0, y: p.1}).collect();
+    let points: Vec<Point> = points.into_iter().map(|p| Point { x: p.0, y: p.1 }).collect();
     let result = triangulate(&points).unwrap().triangles;
     let mut neighbors: Vec<Vec<usize>> = (0..labels.len()).into_iter().map(|_| vec![]).collect();
 
     for i in 0..(result.len() / 3 as usize) {
         let i = i * 3;
-        let slice = vec![result[i], result[i+1], result[i+2]];
+        let slice = vec![result[i], result[i + 1], result[i + 2]];
         for x in &slice {
             for y in &slice {
-                if neighbors[*x].iter().any(|i| i!=y) {
+                if neighbors[*x].iter().any(|i| i != y) {
                     neighbors[*x].push(labels[*y])
                 }
             }
@@ -51,7 +49,7 @@ pub fn points_neighbors_triangulation(points: Vec<(f64, f64)>, labels: Vec<usize
 
 
 // Build a kdtree using kiddo with labels
-fn kdtree_builder(points: &Vec<(f64, f64)>, labels: &Vec<usize>) -> KdTree<f64, usize, 2>
+pub fn kdtree_builder(points: &Vec<(f64, f64)>, labels: &Vec<usize>) -> KdTree<f64, usize, 2>
 {
     let mut tree: KdTree<f64, usize, 2> = KdTree::new();
     for (p, label) in points.iter().zip(labels) {
@@ -62,21 +60,21 @@ fn kdtree_builder(points: &Vec<(f64, f64)>, labels: &Vec<usize>) -> KdTree<f64, 
 
 
 fn points_neighbors_within(tree: &KdTree<f64, usize, 2>, point: &(f64, f64), r: f64)
-    -> Vec<usize> {
+                           -> Vec<usize> {
     let within = tree.within_unsorted(&[point.0, point.1], r, &squared_euclidean).unwrap();
     within.iter().map(|(_, i)| { **i }).collect()
 }
 
 
 fn points_neighbors_knn(tree: &KdTree<f64, usize, 2>, point: &(f64, f64), k: usize)
-    -> Vec<usize> {
+                        -> Vec<usize> {
     let within = tree.nearest(&[point.0, point.1], k, &squared_euclidean).unwrap();
-    within.iter().map(|(_, i)| **i ).collect()
+    within.iter().map(|(_, i)| **i).collect()
 }
 
 
 fn points_neighbors_knn_within(tree: &KdTree<f64, usize, 2>, point: &(f64, f64), r: f64, k: usize)
-    -> Vec<usize> {
+                               -> Vec<usize> {
     tree.best_n_within(&[point.0, point.1], r, k, &squared_euclidean).unwrap()
 }
 
@@ -140,22 +138,22 @@ pub fn init_bbox(bbox: Vec<(f64, f64, f64, f64)>, labels: Vec<usize>) -> Vec<BBo
 fn expand_bbox(bbox: &Vec<BBox>, expand: f64) -> Vec<AABB<[f64; 2]>> {
     bbox.iter()
         .map(|b| {
-        BBox::new((b.minx - expand,
-                   b.miny - expand,
-                   b.maxx + expand,
-                   b.maxy + expand), b.label).envelope()
-    }).collect()
+            BBox::new((b.minx - expand,
+                       b.miny - expand,
+                       b.maxx + expand,
+                       b.maxy + expand), b.label).envelope()
+        }).collect()
 }
 
 
 fn scale_bbox(bbox: &Vec<BBox>, scale: f64) -> Vec<AABB<[f64; 2]>> {
     bbox.iter()
         .map(|b| {
-        let xexpand: f64 = (b.maxx - b.minx) * (scale - 1.0);
-        let yexpand: f64 = (b.maxy - b.miny) * (scale - 1.0);
-        BBox::new(
-            (b.minx - xexpand, b.miny - yexpand, b.maxx + xexpand, b.maxy + yexpand),
-            b.label,
-        ).envelope()
-    }).collect()
+            let xexpand: f64 = (b.maxx - b.minx) * (scale - 1.0);
+            let yexpand: f64 = (b.maxy - b.miny) * (scale - 1.0);
+            BBox::new(
+                (b.minx - xexpand, b.miny - yexpand, b.maxx + xexpand, b.maxy + yexpand),
+                b.label,
+            ).envelope()
+        }).collect()
 }
