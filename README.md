@@ -29,3 +29,11 @@ neighborhood_analysis packages.
 - [x] Spatial autocorrelation
     - [x] Moran's I
     - [x] Geary's C
+- [x] Spatial distribution index
+    - [x] Index of dispersion
+    - [x] Morisita index
+    - [x] Clarks Evans index
+- [x] Getis-ord analysis
+- [x] Spatial entropy
+    - [x] Leibovici entropy
+    - [x] Altieri entropy
