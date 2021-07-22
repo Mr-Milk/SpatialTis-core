@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
-use ndarray::{Array2, ArrayView1, ArrayView2};
+use ndarray::{Array2, ArrayView1, ArrayView2, Data};
 use ndarray::prelude::*;
 use statrs::distribution::{ContinuousCDF, Normal};
 
 use crate::utils::remove_rep_neighbors;
+use num_traits::{Float, FromPrimitive, PrimInt};
 
 // Acquire spatial weights matrix from neighbors relationships
 pub fn spatial_weights_matrix(neighbors: Vec<Vec<usize>>, labels: &Vec<usize>) -> Array2<usize> {
@@ -41,7 +42,8 @@ pub fn spatial_weights_matrix(neighbors: Vec<Vec<usize>>, labels: &Vec<usize>) -
 }
 
 
-pub fn moran_i_index(x: ArrayView1<f64>, w: ArrayView2<usize>, two_tailed: bool) -> (f64, f64) {
+pub fn moran_i_index(x: ArrayView1<f64>, w: ArrayView2<usize>, two_tailed: bool) -> (f64, f64)
+{
     let n: f64 = x.len() as f64;
     let w_sum: f64 = w.sum() as f64;
     let mean_x = x.mean().unwrap();

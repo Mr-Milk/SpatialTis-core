@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use counter::Counter;
 
 use crate::stat::mean;
+use ndarray::prelude::*;
 
 pub fn py_kwarg<T>(arg: Option<T>, default_value: T) -> T {
     match arg {

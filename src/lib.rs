@@ -28,6 +28,7 @@ mod geo;
 mod spatial_autocorr;
 mod distribution_index;
 mod hotspot;
+mod entropy;
 
 #[pymodule]
 fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
