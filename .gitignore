@@ -4,5 +4,9 @@
 /target
 **/*.rs.bk
 
-.pyd
+*.pyd
+*.so
 __pycache__
+
+*.ipynb
+/.ipynb_checkpoints

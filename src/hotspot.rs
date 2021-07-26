@@ -2,10 +2,10 @@ use itertools::Itertools;
 use kiddo::distance::squared_euclidean;
 use ndarray::prelude::*;
 use ndarray_stats::QuantileExt;
-use statrs::distribution::{ContinuousCDF, Normal};
 
 use crate::neighbors_search::kdtree_builder;
 use crate::quad_stats::QuadStats;
+use crate::utils::zscore2pvalue;
 
 pub fn hotspot(points: Vec<(f64, f64)>,
                bbox: (f64, f64, f64, f64),
@@ -63,11 +63,8 @@ pub fn hotspot(points: Vec<(f64, f64)>,
                 let u = ((quad_n * sum_w - sum_w.powi(2)) / (quad_n - 1.0)).sqrt();
                 if u == 0.0 { false } else {
                     let z = sum_wc - (mean_c * sum_w / (s * u));
-                    let norm_dist = Normal::new(0.0, 1.0).unwrap(); // follow the scipy's default
-                    let mut p_value: f64 = if z > 0.0 {
-                        1.0 - norm_dist.cdf(z)
-                    } else { norm_dist.cdf(z) };
-                    p_value *= 2.0;
+
+                    let p_value = zscore2pvalue(z, true);
                     p_value < pval
                 }
             }).collect();

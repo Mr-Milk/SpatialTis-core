@@ -2,19 +2,19 @@ use itertools::Itertools;
 use kiddo::distance::squared_euclidean;
 use ndarray::Array1;
 use rand::{Rng, thread_rng};
-use statrs::distribution::{ChiSquared, ContinuousCDF, Normal};
 
 use crate::neighbors_search::kdtree_builder;
 use crate::quad_stats::QuadStats;
+use crate::utils::{zscore2pvalue, chisquare2pvalue};
 
 const EMPTY_RETURN: (f64, f64, usize) = (0.0, 0.0, 0);
 
-fn ix_dispersion(points: Vec<(f64, f64)>,
-                 bbox: (f64, f64, f64, f64),
-                 r: f64,
-                 resample: usize,
-                 pval: f64,
-                 min_cells: usize,
+pub fn ix_dispersion(points: Vec<(f64, f64)>,
+                     bbox: (f64, f64, f64, f64),
+                     r: f64,
+                     resample: usize,
+                     pval: f64,
+                     min_cells: usize,
 ) -> (f64, f64, usize) // return (index_value, p_value, pattern)
 {
     let n = points.len();
@@ -36,9 +36,9 @@ fn ix_dispersion(points: Vec<(f64, f64)>,
         let counts_mean = counts.mean().unwrap();
         if counts_mean != 0.0 {
             let id = counts.var(0.0) / counts_mean;
-            let chi2_v = (n - 1) as f64 * id;
-            let chi2_dist = ChiSquared::new((n - 1) as f64).unwrap();
-            let p_value = 1.0 - chi2_dist.cdf(chi2_v as f64);
+            let ddof = (n - 1) as f64;
+            let chi2_v = ddof * id;
+            let p_value = chisquare2pvalue(chi2_v, ddof);
             let pattern = get_pattern(id, p_value, pval);
             (id, p_value, pattern)
         } else { EMPTY_RETURN } // if sample nothing, return 0
@@ -64,8 +64,7 @@ pub fn morisita_ix(points: Vec<(f64, f64)>,
         if sum_x > 1.0 {
             let id = n as f64 * (sum_x_sqr - sum_x) / (sum_x.powi(2) - sum_x);
             let chi2_v = id * (sum_x - 1.0) + n as f64 - sum_x;
-            let chi2_dist = ChiSquared::new((n - 1) as f64).unwrap();
-            let p_value = 1.0 - chi2_dist.cdf(chi2_v);
+            let p_value = chisquare2pvalue(chi2_v, (n - 1) as f64);
             let pattern = get_pattern(id, p_value, pval);
             (id, p_value, pattern)
         } else { EMPTY_RETURN }
@@ -98,11 +97,7 @@ pub fn clark_evans_ix(points: Vec<(f64, f64)>,
         let pi = std::f64::consts::PI;
         let se: f64 = (((4.0 - pi) * area) / (4.0 * pi)).sqrt() / n as f64;
         let z = (nnd_mean - nnd_expected_mean) / se;
-        let norm_dist = Normal::new(0.0, 1.0).unwrap(); // follow the scipy's default
-        let mut p_value: f64 = if z > 0.0 {
-            1.0 - norm_dist.cdf(z)
-        } else { norm_dist.cdf(z) };
-        p_value *= 2.0;
+        let p_value = zscore2pvalue(z, true);
         let reject_null = p_value < pval;
         let pattern: usize = if reject_null {
             if big_r < 1.0 { 3 } else if big_r == 1.0 { 2 } else { 1 }

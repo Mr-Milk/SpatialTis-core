@@ -4,7 +4,7 @@ use geo::algorithm::convex_hull::ConvexHull;
 use geo::algorithm::coords_iter::CoordsIter;
 use geo::LineString;
 
-pub fn point2bbox(p: Vec<(f64, f64)>) -> (f64, f64, f64, f64) {
+pub fn point2bbox(p: Vec<(f64, f64)>) -> (f64, f64, f64, f64) { // minx, miny, maxx, maxy
     let line_string: LineString<f64> = p.into();
     let bounding_rect = line_string.bounding_rect().unwrap();
     (bounding_rect.min().x, bounding_rect.min().y, bounding_rect.max().x, bounding_rect.max().y)

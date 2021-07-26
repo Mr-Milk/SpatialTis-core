@@ -26,7 +26,7 @@ impl QuadStats {
     ) -> HashMap<usize, usize> {
         let bbox = match bbox {
             Some(data) => data,
-            _ => point2bbox(points.clone())
+            _ => point2bbox(points.to_owned())
         }; // if bbox is not provide, calculate it for user
 
         let width = bbox.2 - bbox.0;
@@ -40,8 +40,14 @@ impl QuadStats {
             _ => {
                 match rect_side {
                     Some(rect) => {
-                        self.nx = floordiv(width, rect.0) as usize;
-                        self.ny = floordiv(height, rect.1) as usize;
+                        let nx = floordiv(width, rect.0) as usize;
+                        let ny = floordiv(height, rect.1) as usize;
+                        if (nx == 0) | (ny == 0) {
+                            panic!("The side of the rect is bigger than the bbox")
+                        } else {
+                            self.nx = nx;
+                            self.ny = ny;
+                        }
                     }
                     _ => {}
                 }

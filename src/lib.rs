@@ -15,8 +15,13 @@ use crate::neighbors_search::{bbox_neighbors_rtree,
                               points_neighbors_kdtree,
                               points_neighbors_triangulation};
 use crate::spatial_autocorr::{geary_c_index, moran_i_index, spatial_weights_matrix};
+use crate::hotspot::hotspot;
+use crate::distribution_index::{ix_dispersion, morisita_ix, clark_evans_ix};
+
+use crate::entropy::{leibovici_entropy, altieri_entropy};
+
 use crate::stat::{mean, std_dev};
-use crate::utils::{comb_count_neighbors, count_neighbors, py_kwarg, remove_rep_neighbors};
+use crate::utils::{comb_count_neighbors, count_neighbors, py_kwarg, remove_rep_neighbors, zscore2pvalue};
 
 mod preprocessing;
 mod utils;
@@ -49,6 +54,18 @@ fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(neighbors_matrix))?;
     m.add_wrapped(wrap_pyfunction!(moran_i))?;
     m.add_wrapped(wrap_pyfunction!(geary_c))?;
+
+    // spatial distribution
+    m.add_wrapped(wrap_pyfunction!(index_of_dispersion))?;
+    m.add_wrapped(wrap_pyfunction!(morisita_index))?;
+    m.add_wrapped(wrap_pyfunction!(clark_evans_index))?;
+
+    // spatial entropy
+    m.add_wrapped(wrap_pyfunction!(leibovici))?;
+    m.add_wrapped(wrap_pyfunction!(altieri))?;
+
+    // hotspot
+    m.add_wrapped(wrap_pyfunction!(getis_ord))?;
 
     // boostrap for cell cell interactions
     m.add_class::<CellCombs>()?;
@@ -106,73 +123,18 @@ pub fn neighbors_matrix(py: Python,
     spatial_weights_matrix(neighbors, &labels).into_pyarray(py)
 }
 
-#[pyfunction]
-pub fn moran_i<'py>(_py: Python<'py>,
-                    x: PyReadonlyArray1<f64>,
-                    w: PyReadonlyArray2<usize>,
-                    two_tailed: Option<bool>)
-                    -> (f64, f64) {
-    let x = x.as_array();
-    let w = w.as_array();
-    let two_tailed = py_kwarg(two_tailed, true);
-
-    moran_i_index(x, w, two_tailed)
-}
-
 
 #[pyfunction]
-pub fn geary_c<'py>(_py: Python<'py>,
-                    x: PyReadonlyArray1<f64>,
-                    w: PyReadonlyArray2<usize>,
-)
-                    -> (f64, f64) {
-    let x = x.as_array();
-    let w = w.as_array();
-
-    geary_c_index(x, w)
-}
-
-
-#[pyfunction]
-fn fast_corr<'py>(py: Python<'py>, data1: PyReadonlyArray2<f64>, data2: PyReadonlyArray2<f64>, method: Option<&str>)
-                  -> &'py PyArray1<f64> {
-    let method: &str = match method {
-        Some("pearson") => "p",
-        Some("spearman") => "s",
-        _ => "s",
-    };
-
-    let data1 = data1.as_array();
-    let data2 = data2.as_array();
-
-    corr::cross_corr(data1, data2, method).to_pyarray(py)
-}
-
-
-#[pyfunction]
-fn points_neighbors(points: Vec<(f64, f64)>,
+pub fn points_neighbors(points: Vec<(f64, f64)>,
                     labels: Option<Vec<usize>>,
                     method: Option<&str>,
                     r: Option<f64>,
                     k: Option<usize>, )
                     -> Vec<Vec<usize>> {
-    // let labels = match labels {
-    //     Some(data) => data,
-    //     None => (0..points.len()).into_iter().collect(),
-    // };
 
     let labels = py_kwarg(labels, (0..points.len()).into_iter().collect());
     let r = py_kwarg(r, -1.0);
     let mut k = py_kwarg(k, 0);
-    // let r = match r {
-    //     Some(data) => data,
-    //     None => -1.0, // if negative, will no perform radius search
-    // };
-
-    // let mut k = match k {
-    //     Some(data) => data,
-    //     None => 0, // if 0, will no perform knn search
-    // };
 
     let method = match method {
         Some("kdtree") => "kdtree",
@@ -183,7 +145,7 @@ fn points_neighbors(points: Vec<(f64, f64)>,
         } // default will search for knn = 5
     };
 
-    if (r < 0.0) & (k == 0) {
+    if (method == "kdtree") & (r < 0.0) & (k == 0) {
         panic!("Need either `r` or `k` to run the analysis.")
     }
 
@@ -196,26 +158,15 @@ fn points_neighbors(points: Vec<(f64, f64)>,
 
 
 #[pyfunction]
-fn bbox_neighbors(bbox: Vec<(f64, f64, f64, f64)>,
+pub fn bbox_neighbors(bbox: Vec<(f64, f64, f64, f64)>,
                   labels: Option<Vec<usize>>,
                   expand: Option<f64>,
                   scale: Option<f64>,
 )
                   -> Vec<Vec<usize>> {
-    let labels = match labels {
-        Some(data) => data,
-        _ => (0..bbox.len()).into_iter().collect(),
-    };
-
-    let expand = match expand {
-        Some(data) => data,
-        _ => -1.0,
-    };
-
-    let scale = match scale {
-        Some(data) => data,
-        _ => 1.3, // default to scale 1.3
-    };
+    let labels = py_kwarg(labels, (0..bbox.len()).into_iter().collect());
+    let expand = py_kwarg(expand, -1.0);
+    let scale = py_kwarg(scale, 1.3);
 
     bbox_neighbors_rtree(init_bbox(bbox, labels), expand, scale)
 }
@@ -265,72 +216,43 @@ pub fn neighbor_components(neighbors: HashMap<usize, Vec<usize>>, types: HashMap
 ///     ignore_self: bool (False); Whether to consider self as a neighbor
 ///
 /// Return:
-///     The z-score for the spatial relationship between X and Y
+///     The p-value for the spatial relationship between X and Y
 ///
 #[pyfunction]
-fn comb_bootstrap(
-    py: Python,
-    x_status: PyObject,
-    y_status: PyObject,
-    neighbors: PyObject,
+pub fn comb_bootstrap(
+    x_status: Vec<bool>,
+    y_status: Vec<bool>,
+    neighbors: Vec<Vec<usize>>,
     times: Option<usize>,
     ignore_self: Option<bool>,
 )
-    -> PyResult<f64> {
-    let x: Vec<bool> = match x_status.extract(py) {
-        Ok(data) => data,
-        Err(_) => {
-            return Err(PyTypeError::new_err(
-                "Can't resolve `x_status`, should be list of bool.",
-            ));
-        }
-    };
+    -> f64 {
 
-    let y: Vec<bool> = match y_status.extract(py) {
-        Ok(data) => data,
-        Err(_) => {
-            return Err(PyTypeError::new_err(
-                "Can't resolve `y_status`, should be list of bool.",
-            ));
-        }
-    };
+    let times = py_kwarg(times, 1000);
+    let ignore_self = py_kwarg(ignore_self, false);
 
-    let neighbors_data: Vec<Vec<usize>> = match neighbors.extract(py) {
-        Ok(data) => data,
-        Err(_) => {
-            return Err(PyTypeError::new_err(
-                "Can't resolve `neighbors`, should be a dict.",
-            ));
-        }
-    };
-
-    let times = match times {
-        Some(data) => data,
-        None => 500,
-    };
-
-    let ignore_self = match ignore_self {
-        Some(data) => data,
-        None => false,
-    };
-    let neighbors = utils::remove_rep_neighbors(neighbors_data, ignore_self);
-    let real: f64 = comb_count_neighbors(&x, &y, &neighbors) as f64;
+    let neighbors = utils::remove_rep_neighbors(neighbors, ignore_self);
+    let real: f64 = comb_count_neighbors(&x_status, &y_status, &neighbors) as f64;
 
     let perm_counts: Vec<usize> = (0..times)
         .into_par_iter()
         .map(|_| {
             let mut rng = thread_rng();
-            let mut shuffle_y = y.to_owned();
+            let mut shuffle_y = y_status.to_owned();
             shuffle_y.shuffle(&mut rng);
-            let perm_result = comb_count_neighbors(&x, &shuffle_y, &neighbors);
+            let perm_result = comb_count_neighbors(&x_status, &shuffle_y, &neighbors);
             perm_result
         })
         .collect();
 
     let m = mean(&perm_counts);
     let sd = std_dev(&perm_counts);
+    if sd != 0.0 {
+        let z = (real - m) / sd;
+        zscore2pvalue(z, false)
+    } else { 1.0 }
 
-    Ok((real - m) / sd)
+
 }
 
 
@@ -366,15 +288,11 @@ impl CellCombs {
             }
         };
 
-        let order_data: bool = match order {
-            Some(data) => data,
-            None => false,
-        };
-
+        let order = py_kwarg(order, false);
         let uni: Vec<&str> = types_data.into_iter().unique().collect();
         let mut combs = vec![];
 
-        if order_data {
+        if order {
             for i1 in uni.to_owned() {
                 for i2 in uni.to_owned() {
                     combs.push((i1, i2));
@@ -393,7 +311,7 @@ impl CellCombs {
         Ok(CellCombs {
             cell_types: uni.to_object(py),
             cell_combs: combs.to_object(py),
-            order: order_data,
+            order,
         })
     }
 
@@ -424,7 +342,7 @@ impl CellCombs {
         ignore_self: Option<bool>,
     )
         -> PyResult<PyObject> {
-        let types_data: Vec<&str> = match types.extract(py) {
+        let types: Vec<&str> = match types.extract(py) {
             Ok(data) => data,
             Err(_) => {
                 return Err(PyTypeError::new_err(
@@ -432,7 +350,7 @@ impl CellCombs {
                 ));
             }
         };
-        let neighbors_data: Vec<Vec<usize>> = match neighbors.extract(py) {
+        let neighbors: Vec<Vec<usize>> = match neighbors.extract(py) {
             Ok(data) => data,
             Err(_) => {
                 return Err(PyTypeError::new_err(
@@ -441,34 +359,18 @@ impl CellCombs {
             }
         };
 
-        let times = match times {
-            Some(data) => data,
-            None => 500,
-        };
-
-        let pval = match pval {
-            Some(data) => data,
-            None => 0.05,
-        };
-
-        let method = match method {
-            Some(data) => data,
-            None => "pval",
-        };
-
-        let ignore_self = match ignore_self {
-            Some(data) => data,
-            None => false,
-        };
-
         let cellcombs: Vec<(&str, &str)> = match self.cell_combs.extract(py) {
             Ok(data) => data,
             Err(_) => return Err(PyTypeError::new_err("Resolve cell_combs failed.")),
         };
 
-        let neighbors = remove_rep_neighbors(neighbors_data, ignore_self);
+        let times = py_kwarg(times, 1000);
+        let pval = py_kwarg(pval, 0.05);
+        let method = py_kwarg(method, "pval");
+        let ignore_self = py_kwarg(ignore_self, false);
 
-        let real_data = count_neighbors(&types_data, &neighbors, &cellcombs, self.order);
+        let neighbors = remove_rep_neighbors(neighbors, ignore_self);
+        let real_data = count_neighbors(&types, &neighbors, &cellcombs, self.order);
 
         let mut simulate_data = cellcombs
             .iter()
@@ -479,7 +381,7 @@ impl CellCombs {
             .into_par_iter()
             .map(|_| {
                 let mut rng = thread_rng();
-                let mut shuffle_types = types_data.to_owned();
+                let mut shuffle_types = types.to_owned();
                 shuffle_types.shuffle(&mut rng);
                 let perm_result =
                     count_neighbors(&shuffle_types, &neighbors, &cellcombs, self.order);
@@ -493,7 +395,7 @@ impl CellCombs {
             }
         }
 
-        let mut results: Vec<((&str, &str), f64)> = vec![];
+        let mut results: Vec<((&str, &str), f64)> = Vec::with_capacity(simulate_data.len());
 
         for (k, v) in simulate_data.iter() {
             let real = real_data[k];
@@ -509,10 +411,10 @@ impl CellCombs {
                         lt += 1.0
                     }
                 }
-                let gt: f64 = gt as f64 / (times.to_owned() as f64 + 1.0);
-                let lt: f64 = lt as f64 / (times.to_owned() as f64 + 1.0);
+                let gt: f64 = gt / (times.to_owned() as f64 + 1.0);
+                let lt: f64 = lt / (times.to_owned() as f64 + 1.0);
                 let dir: f64 = (gt < lt) as i32 as f64;
-                let udir: f64 = !(gt < lt) as i32 as f64;
+                let udir: f64 = - dir;
                 let p: f64 = gt * dir + lt * udir;
                 let sig: f64 = (p < pval) as i32 as f64;
                 let sigv: f64 = sig * (dir - 0.5).signum();
@@ -520,11 +422,16 @@ impl CellCombs {
             } else {
                 let m = mean(v);
                 let sd = std_dev(v);
+
                 if sd != 0.0 {
-                    results.push((k.to_owned(), (real - m) / sd));
-                } else {
-                    results.push((k.to_owned(), 0.0));
-                }
+                    let z = (real - m) / sd;
+                    let p = zscore2pvalue(z, false);
+                    let dir: f64 = (z > 0.0) as i32 as f64;
+                    let sig: f64 = (p < pval) as i32 as f64;
+                    let sigv: f64 = sig * (dir - 0.5).signum();
+                    results.push((k.to_owned(), sigv));
+                } else { results.push((k.to_owned(), 1.0)) };
+
             }
         }
 
@@ -533,3 +440,136 @@ impl CellCombs {
         Ok(results_py)
     }
 }
+
+
+#[pyfunction]
+pub fn moran_i<'py>(_py: Python<'py>,
+                    x: PyReadonlyArray1<f64>,
+                    w: PyReadonlyArray2<usize>,
+                    two_tailed: Option<bool>)
+                    -> (f64, f64) {
+    let x = x.as_array();
+    let w = w.as_array();
+    let two_tailed = py_kwarg(two_tailed, true);
+
+    moran_i_index(x, w, two_tailed)
+}
+
+
+#[pyfunction]
+pub fn geary_c<'py>(_py: Python<'py>,
+                    x: PyReadonlyArray1<f64>,
+                    w: PyReadonlyArray2<usize>,
+)
+                    -> (f64, f64) {
+    let x = x.as_array();
+    let w = w.as_array();
+
+    geary_c_index(x, w)
+}
+
+
+#[pyfunction]
+pub fn fast_corr<'py>(py: Python<'py>, data1: PyReadonlyArray2<f64>, data2: PyReadonlyArray2<f64>, method: Option<&str>)
+                  -> &'py PyArray1<f64> {
+    let method: &str = match method {
+        Some("pearson") => "p",
+        Some("spearman") => "s",
+        _ => "s",
+    };
+
+    let data1 = data1.as_array();
+    let data2 = data2.as_array();
+
+    corr::cross_corr(data1, data2, method).to_pyarray(py)
+}
+
+
+fn bbox_side_part(bbox: (f64, f64, f64, f64)) -> f64 {
+    let x_range = bbox.2 - bbox.0;
+    let y_range = bbox.3 - bbox.1;
+    let min = if x_range <= y_range { x_range } else { y_range };
+    min / 10.0
+}
+
+
+#[pyfunction]
+pub fn index_of_dispersion(points: Vec<(f64, f64)>,
+                       bbox: Option<(f64, f64, f64, f64)>,
+                       r: Option<f64>,
+                       resample: Option<usize>,
+                       pval: Option<f64>,
+                       min_cells: Option<usize>) -> (f64, f64, usize) {
+    let bbox = py_kwarg(bbox, point2bbox(points.to_owned()));
+    let r = py_kwarg(r, bbox_side_part(bbox));
+    let resample = py_kwarg(resample, 1000);
+    let pval = py_kwarg(pval, 0.05);
+    let min_cells = py_kwarg(min_cells, 10);
+
+    ix_dispersion(points, bbox, r, resample, pval, min_cells)
+}
+
+
+#[pyfunction]
+pub fn morisita_index(points: Vec<(f64, f64)>,
+                       bbox: (f64, f64, f64, f64),
+                       quad: Option<(usize, usize)>,
+                        rect_side: Option<(f64, f64)>,
+                       pval: Option<f64>,
+                       min_cells: Option<usize>) -> (f64, f64, usize) {
+    let pval = py_kwarg(pval, 0.05);
+    let min_cells = py_kwarg(min_cells, 10);
+
+    morisita_ix(points, bbox, quad, rect_side, pval, min_cells)
+}
+
+
+#[pyfunction]
+pub fn clark_evans_index(points: Vec<(f64, f64)>,
+                       bbox: (f64, f64, f64, f64),
+                       pval: Option<f64>,
+                       min_cells: Option<usize>) -> (f64, f64, usize) {
+    let pval = py_kwarg(pval, 0.05);
+    let min_cells = py_kwarg(min_cells, 10);
+
+    clark_evans_ix(points, bbox, pval, min_cells)
+}
+
+
+#[pyfunction]
+pub fn leibovici(points: Vec<(f64, f64)>,
+                 types: Vec<usize>,
+                 d: Option<f64>,
+                 order: Option<bool>) -> f64 {
+    let bbox = point2bbox(points.to_owned());
+    let d = py_kwarg(d, bbox_side_part(bbox));
+    let order = py_kwarg(order, false);
+    leibovici_entropy(points, types, d, order)
+}
+
+
+#[pyfunction]
+pub fn altieri(points: Vec<(f64, f64)>,
+               types: Vec<usize>,
+               cut: Option<Vec<f64>>,
+               order: Option<bool>) -> f64 {
+    let order = py_kwarg(order, false);
+    altieri_entropy(points, types, cut, order)
+}
+
+
+#[pyfunction]
+pub fn getis_ord(points: Vec<(f64, f64)>,
+               bbox: (f64, f64, f64, f64),
+               search_level: Option<usize>,
+               quad: Option<(usize, usize)>,
+               rect_side: Option<(f64, f64)>,
+               pval: Option<f64>,
+               min_cells: Option<usize>,) -> Vec<bool> {
+    let search_level = py_kwarg(search_level, 3);
+    let pval = py_kwarg(pval, 0.05);
+    let min_cells = py_kwarg(min_cells, 10);
+    hotspot(points, bbox, search_level, quad, rect_side, pval, min_cells)
+}
+
+

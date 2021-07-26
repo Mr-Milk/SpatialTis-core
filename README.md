@@ -4,6 +4,12 @@ This repo implement some of the computation intense steps in SpatialTis
 for a better performance. This is used in favor of the old
 neighborhood_analysis packages.
 
+To build the package, you need the nightly version of rustup > 1.55.0
+```shell
+rustup toolchain install nightly
+rustup default nightly
+```
+
 ## Modules
 - [x] Points -> BBox
 - [x] Points -> Shape

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use counter::Counter;
 
 use crate::stat::mean;
-use ndarray::prelude::*;
+use statrs::distribution::{Normal, ContinuousCDF, ChiSquared};
 
 pub fn py_kwarg<T>(arg: Option<T>, default_value: T) -> T {
     match arg {
@@ -90,4 +90,21 @@ pub fn remove_rep_neighbors(rep_neighbors: Vec<Vec<usize>>, ignore_self: bool)
     }
 
     neighbors
+}
+
+
+pub fn zscore2pvalue(z: f64, two_tailed: bool) -> f64 {
+    let norm_dist = Normal::new(0.0, 1.0).unwrap(); // follow the scipy's default
+    let mut p: f64 = if z > 0.0 {
+        1.0 - norm_dist.cdf(z)
+    } else { norm_dist.cdf(z) };
+
+    if two_tailed { p *= 2.0 }
+
+    p
+}
+
+pub fn chisquare2pvalue(chi2_value: f64, ddof: f64) -> f64 {
+    let chi2_dist = ChiSquared::new(ddof).unwrap();
+    1.0 - chi2_dist.cdf(chi2_value)
 }

@@ -1,31 +1,83 @@
-from spatialtis_core import points_neighbors,\
-    fast_corr, MoranI, neighbors_matrix
+from spatialtis_core import (
+    multi_points_bbox,
+    points2bbox,
+    points2shapes,
+    points_neighbors,
+    bbox_neighbors,
+    neighbor_components,
+    fast_corr,
+    moran_i,
+    geary_c,
+    neighbors_matrix,
+    index_of_dispersion,
+    morisita_index,
+    clark_evans_index,
+    leibovici,
+    altieri,
+    getis_ord,
+    comb_bootstrap
+)
 
-from scipy.stats import spearmanr
+# from scipy.stats import spearmanr
+from scipy.sparse import csr_matrix
+from libpysal.weights import W
+from esda import Moran, Geary
 
 from time import time
 import numpy as np
-data1 = np.random.rand(1, 1000).tolist()
-data2 = np.random.rand(1, 1000).tolist()
+data1 = np.random.rand(1000, 3000)
+data2 = np.random.rand(1000, 3000)
 labels = [str(i) for i in range(1)]
 
 # t1 = time()
-# print(fast_corr(labels, data1, data1, "spearman"))
+# print(fast_corr(data1, data1, "spearman"))
 # t2 = time()
 # print(f"fast corr used {t2-t1:5f}")
 #
 # t1 = time()
-# print(spearmanr(data1[0], data1[0]))
+# for a1 in data1:
+#     for a2 in data2:
+#         spearmanr(a1, a2)
 # t2 = time()
 # print(f"scipy used {t2-t1:5f}")
 
 # get random points
 N = 10000 # number of points
 points = [(x, y) for x, y in np.random.randn(N, 2)]
+types = np.random.randint(0, 30, N)
+
+t1 = time()
+leibovici(points, types.tolist())
+t2 = time()
+print(f"Get leibovici used {t2-t1:5f}")
+
 neighbors = points_neighbors(points, r=5)
 labels = [_ for _ in range(len(neighbors))]
+t1 = time()
 matrix = neighbors_matrix(neighbors, labels)
+t2 = time()
+print(f"Get matrix used {t2-t1:5f}")
+
+neighbors_obj = dict(zip(labels, neighbors))
 
 exp = np.random.randn(N)
-i = MoranI(exp, matrix)
-print("Moran'I is", i)
+t1 = time()
+matrix = neighbors_matrix(neighbors, labels)
+i = moran_i(exp, csr_matrix(matrix))
+t2 = time()
+print(f"Used {t2-t1:5f} Moran'I is {i}")
+#
+t1 = time()
+w = W(neighbors_obj)
+m = Moran(exp, w)
+i = m.I
+p = m.p_norm
+t2 = time()
+print(f"Used {t2-t1:5f} esda Moran'I is {i}")
+#
+# t1 = time()
+# i = geary_c(exp, matrix)
+# t2 = time()
+# print(f"Used {t2-t1:5f} Geary'C is {i}")
+# m = Geary(exp, w)
+# print(f"esda result C:{m.C}, p:{m.p_norm}")

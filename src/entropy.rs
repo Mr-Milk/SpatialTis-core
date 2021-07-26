@@ -1,36 +1,54 @@
 use ndarray::prelude::*;
-use ndarray::{stack, Zip, Data};
 use std::collections::HashMap;
-use num_traits::Float;
+use itertools_num::linspace;
 
-use itertools::{CombinationsWithReplacement, Itertools};
+use crate::neighbors_search::points_neighbors_kdtree;
 
 
 pub fn leibovici_entropy(points: Vec<(f64, f64)>, types: Vec<usize>, d: f64, order: bool) -> f64 {
-    let pdist = pdist_2d(points);
-    let ptypes = pair_type(types);
-
-    let pdist_mask = dist_cutoff_mask_arr(&pdist, (0.0, d));
-    let mut used_pairs = vec![];
-    for (mask, t) in pdist_mask.iter().zip(ptypes.iter()) {
-        if *mask { used_pairs.push(*t) }
+    let n = points.len();
+    let neighbors = points_neighbors_kdtree(points, (0..n).collect(), d, 0);
+    let mut pairs = vec![];
+    for (i, neighs) in neighbors.iter().enumerate() {
+        for cell in neighs {
+            if *cell > i {
+                pairs.push((types[i], types[*cell]))
+            }
+        }
     }
 
-    let pairs_counts = if order { ordered_pairs_counter(used_pairs) } else { unordered_pairs_counter(used_pairs) };
+    let pairs_counts = if order { ordered_pairs_counter(pairs) } else { unordered_pairs_counter(pairs) };
     let mut v: Array1<f64> = Array::from_vec(pairs_counts.values().into_iter().map(|i| *i as f64).collect());
     v = &v / v.sum();
     v.mapv(|i| i * (1.0 / i).log2()).sum()
 }
 
 
-pub fn altieri_entropy(points: Vec<(f64, f64)>, types: Vec<usize>, cut: Vec<(f64, f64)>, order: bool) -> f64 {
+pub fn altieri_entropy(points: Vec<(f64, f64)>, types: Vec<usize>, cut: Option<Vec<f64>>, order: bool) -> f64 {
     let pdist = pdist_2d(points);
     let ptypes = pair_type(types);
+
+    let cut = match cut {
+        Some(data) => data,
+        _ => {
+            let max = pdist.iter().reduce(|a, b| {
+                if a >= b { a } else { b }
+            }).unwrap();
+            linspace::<f64>(0., *max, 3).into_iter().collect()
+        }
+    };
+
+    let mut cut_range = vec![];
+    for (i, c) in cut.iter().enumerate() {
+        if i < cut.len() {
+            cut_range.push((*c, cut[i+1]))
+        }
+    }
 
     let mut zw = vec![];
     let mut w = vec![];
 
-    for c in cut {
+    for c in cut_range {
         let pdist_mask = dist_cutoff_mask_arr(&pdist, (c.0, c.1));
         let mut used_pairs = vec![];
         for (mask, t) in pdist_mask.iter().zip(ptypes.iter()) {
