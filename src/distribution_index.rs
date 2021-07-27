@@ -2,12 +2,43 @@ use itertools::Itertools;
 use kiddo::distance::squared_euclidean;
 use ndarray::Array1;
 use rand::{Rng, thread_rng};
+use rayon::prelude::*;
 
 use crate::neighbors_search::kdtree_builder;
 use crate::quad_stats::QuadStats;
-use crate::utils::{zscore2pvalue, chisquare2pvalue};
+use crate::utils::{chisquare2pvalue, zscore2pvalue};
 
 const EMPTY_RETURN: (f64, f64, usize) = (0.0, 0.0, 0);
+
+
+pub fn ix_dispersion_parallel(points_collections: Vec<Vec<(f64, f64)>>,
+                              bbox: (f64, f64, f64, f64),
+                              r: f64,
+                              resample: usize,
+                              pval: f64,
+                              min_cells: usize, ) -> Vec<(f64, f64, usize)>
+{
+    points_collections.into_par_iter().map(|p| ix_dispersion(p, bbox, r, resample, pval, min_cells)).collect()
+}
+
+pub fn morisita_parallel(points_collections: Vec<Vec<(f64, f64)>>,
+                         bbox: (f64, f64, f64, f64),
+                         quad: Option<(usize, usize)>,
+                         rect_side: Option<(f64, f64)>,
+                         pval: f64,
+                         min_cells: usize, ) -> Vec<(f64, f64, usize)>
+{
+    points_collections.into_par_iter().map(|p| morisita_ix(p, bbox, quad, rect_side, pval, min_cells)).collect()
+}
+
+pub fn clark_evans_parallel(points_collections: Vec<Vec<(f64, f64)>>,
+                            bbox: (f64, f64, f64, f64),
+                            pval: f64,
+                            min_cells: usize, ) -> Vec<(f64, f64, usize)>
+{
+    points_collections.into_par_iter().map(|p| clark_evans_ix(p, bbox, pval, min_cells)).collect()
+}
+
 
 pub fn ix_dispersion(points: Vec<(f64, f64)>,
                      bbox: (f64, f64, f64, f64),

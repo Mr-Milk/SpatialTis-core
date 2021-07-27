@@ -4,6 +4,7 @@ use counter::Counter;
 
 use crate::stat::mean;
 use statrs::distribution::{Normal, ContinuousCDF, ChiSquared};
+use itertools::min;
 
 pub fn py_kwarg<T>(arg: Option<T>, default_value: T) -> T {
     match arg {
@@ -67,21 +68,23 @@ pub fn comb_count_neighbors(x: &Vec<bool>, y: &Vec<bool>, neighbors: &Vec<Vec<us
     count
 }
 
-pub fn remove_rep_neighbors(rep_neighbors: Vec<Vec<usize>>, ignore_self: bool)
+pub fn remove_rep_neighbors(rep_neighbors: Vec<Vec<usize>>, labels: Vec<usize>, ignore_self: bool)
                             -> Vec<Vec<usize>> {
+    let min_offset = min(labels.iter()).unwrap();
     let mut neighbors = vec![];
     for (i, neighs) in rep_neighbors.iter().enumerate() {
         let mut new_neighs = vec![];
+        let l = labels[i];
         if ignore_self {
             for cell in neighs {
-                if *cell > i {
-                    new_neighs.push(*cell)
+                if *cell > l {
+                    new_neighs.push(*cell - *min_offset)
                 }
             }
         } else {
             for cell in neighs {
-                if *cell >= i {
-                    new_neighs.push(*cell)
+                if *cell >= l {
+                    new_neighs.push(*cell - *min_offset)
                 }
             }
         }
@@ -94,7 +97,7 @@ pub fn remove_rep_neighbors(rep_neighbors: Vec<Vec<usize>>, ignore_self: bool)
 
 
 pub fn zscore2pvalue(z: f64, two_tailed: bool) -> f64 {
-    let norm_dist = Normal::new(0.0, 1.0).unwrap(); // follow the scipy's default
+    let norm_dist: Normal = Normal::new(0.0, 1.0).unwrap(); // follow the scipy's default
     let mut p: f64 = if z > 0.0 {
         1.0 - norm_dist.cdf(z)
     } else { norm_dist.cdf(z) };
@@ -105,6 +108,6 @@ pub fn zscore2pvalue(z: f64, two_tailed: bool) -> f64 {
 }
 
 pub fn chisquare2pvalue(chi2_value: f64, ddof: f64) -> f64 {
-    let chi2_dist = ChiSquared::new(ddof).unwrap();
+    let chi2_dist: ChiSquared = ChiSquared::new(ddof).unwrap();
     1.0 - chi2_dist.cdf(chi2_value)
 }

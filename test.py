@@ -6,9 +6,7 @@ from spatialtis_core import (
     bbox_neighbors,
     neighbor_components,
     fast_corr,
-    moran_i,
-    geary_c,
-    neighbors_matrix,
+    spatial_autocorr,
     index_of_dispersion,
     morisita_index,
     clark_evans_index,
@@ -19,12 +17,13 @@ from spatialtis_core import (
 )
 
 # from scipy.stats import spearmanr
-from scipy.sparse import csr_matrix
-from libpysal.weights import W
-from esda import Moran, Geary
+# from scipy.sparse import csr_matrix
+# from libpysal.weights import W
+# from esda import Moran, Geary
 
 from time import time
 import numpy as np
+
 data1 = np.random.rand(1000, 3000)
 data2 = np.random.rand(1000, 3000)
 labels = [str(i) for i in range(1)]
@@ -42,41 +41,47 @@ labels = [str(i) for i in range(1)]
 # print(f"scipy used {t2-t1:5f}")
 
 # get random points
-N = 10000 # number of points
+N = 100000  # number of points
 points = [(x, y) for x, y in np.random.randn(N, 2)]
 types = np.random.randint(0, 30, N)
 
-t1 = time()
-leibovici(points, types.tolist())
-t2 = time()
-print(f"Get leibovici used {t2-t1:5f}")
 
-neighbors = points_neighbors(points, r=5)
-labels = [_ for _ in range(len(neighbors))]
 t1 = time()
-matrix = neighbors_matrix(neighbors, labels)
+e = leibovici(points, types.tolist())
 t2 = time()
-print(f"Get matrix used {t2-t1:5f}")
+print(f"Get leibovici entropy {e} used {t2 - t1:5f}")
 
-neighbors_obj = dict(zip(labels, neighbors))
-
-exp = np.random.randn(N)
 t1 = time()
-matrix = neighbors_matrix(neighbors, labels)
-i = moran_i(exp, csr_matrix(matrix))
+e = altieri(points, types.tolist())
 t2 = time()
-print(f"Used {t2-t1:5f} Moran'I is {i}")
+print(f"Get altieri entropy {e} used {t2 - t1:5f}")
+
+
+# neighbors = points_neighbors(points, r=5)
+# labels = [_ for _ in range(len(neighbors))]
+# t1 = time()
+# matrix = neighbors_matrix(neighbors, labels)
+# t2 = time()
+# print(f"Get matrix used {t2 - t1:5f}")
+
+# neighbors_obj = dict(zip(labels, neighbors))
 #
-t1 = time()
-w = W(neighbors_obj)
-m = Moran(exp, w)
-i = m.I
-p = m.p_norm
-t2 = time()
-print(f"Used {t2-t1:5f} esda Moran'I is {i}")
+# exp = np.random.randn(1, N)
+# t1 = time()
+# i = spatial_autocorr(exp, neighbors, labels)
+# t2 = time()
+# print(f"Used {t2 - t1:5f} Moran'I is {i}")
+#
 #
 # t1 = time()
-# i = geary_c(exp, matrix)
+# w = W(neighbors_obj)
+# m = Moran(exp[0], w)
+# i = m.I
+# t2 = time()
+# print(f"Used {t2 - t1:5f} esda Moran'I is {i} p {m.p_norm}")
+#
+# t1 = time()
+# i = spatial_autocorr(exp, neighbors, labels, method="geary_c")
 # t2 = time()
 # print(f"Used {t2-t1:5f} Geary'C is {i}")
 # m = Geary(exp, w)

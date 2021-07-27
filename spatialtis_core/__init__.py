@@ -5,17 +5,20 @@ from .spatialtis_core import (
     points_neighbors,
     bbox_neighbors,
     neighbor_components,
-    fast_corr,
-    # moran_i,
-    geary_c,
-    neighbors_matrix,
-    index_of_dispersion,
-    morisita_index,
-    clark_evans_index,
-    leibovici,
-    altieri,
+    spatial_autocorr,
+    spatial_entropy,
+    spatial_distribution_pattern,
+    build_neighbors_matrix,
     getis_ord,
-    comb_bootstrap
+    comb_bootstrap,
+    CellCombs,
 )
 
-from .spatial_autocorr import moran_i
+from scipy.sparse import csr_matrix
+from typing import List
+
+
+def spatial_weight(neighbors: List[List[int]], labels: List[int]) -> csr_matrix:
+    """Build a neighbors sparse matrix from neighbors data"""
+    shape_n, indptr, col_index, row_index, data = build_neighbors_matrix(neighbors, labels)
+    return csr_matrix((data, col_index, indptr))

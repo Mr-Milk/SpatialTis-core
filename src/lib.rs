@@ -2,24 +2,22 @@ use std::collections::HashMap;
 
 use counter::Counter;
 use itertools::Itertools;
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
+use numpy::{PyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rayon::prelude::*;
 
+use crate::distribution_index::{clark_evans_parallel, ix_dispersion_parallel, morisita_parallel};
+use crate::entropy::{altieri_parallel, leibovici_parallel};
 use crate::geo::{concave, convex, point2bbox};
+use crate::hotspot::hotspot;
 use crate::neighbors_search::{bbox_neighbors_rtree,
                               init_bbox,
                               points_neighbors_kdtree,
                               points_neighbors_triangulation};
-use crate::spatial_autocorr::{geary_c_index, moran_i_index, spatial_weights_matrix};
-use crate::hotspot::hotspot;
-use crate::distribution_index::{ix_dispersion, morisita_ix, clark_evans_ix};
-
-use crate::entropy::{leibovici_entropy, altieri_entropy};
-
+use crate::spatial_autocorr::{geary_c_parallel, moran_i_parallel, spatial_weights_sparse_matrix};
 use crate::stat::{mean, std_dev};
 use crate::utils::{comb_count_neighbors, count_neighbors, py_kwarg, remove_rep_neighbors, zscore2pvalue};
 
@@ -51,18 +49,14 @@ fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(bbox_neighbors))?;
 
     // spatial autocorr
-    m.add_wrapped(wrap_pyfunction!(neighbors_matrix))?;
-    m.add_wrapped(wrap_pyfunction!(moran_i))?;
-    m.add_wrapped(wrap_pyfunction!(geary_c))?;
+    m.add_wrapped(wrap_pyfunction!(spatial_autocorr))?;
+    m.add_wrapped(wrap_pyfunction!(build_neighbors_matrix))?;
 
     // spatial distribution
-    m.add_wrapped(wrap_pyfunction!(index_of_dispersion))?;
-    m.add_wrapped(wrap_pyfunction!(morisita_index))?;
-    m.add_wrapped(wrap_pyfunction!(clark_evans_index))?;
+    m.add_wrapped(wrap_pyfunction!(spatial_distribution_pattern))?;
 
     // spatial entropy
-    m.add_wrapped(wrap_pyfunction!(leibovici))?;
-    m.add_wrapped(wrap_pyfunction!(altieri))?;
+    m.add_wrapped(wrap_pyfunction!(spatial_entropy))?;
 
     // hotspot
     m.add_wrapped(wrap_pyfunction!(getis_ord))?;
@@ -100,38 +94,22 @@ pub fn multi_points_bbox(points: Vec<(f64, f64)>)
 #[pyfunction]
 pub fn points2shapes(p: Vec<(f64, f64)>, method: Option<&str>, concavity: Option<f64>)
                      -> Vec<(f64, f64)> {
-    let method = match method {
-        Some("convex") => "convex",
-        Some("concave") => "concave",
-        _ => "convex",
-    };
-
     let concavity = py_kwarg(concavity, 1.5);
-
-    if method == "convex" {
-        convex(p)
-    } else {
-        concave(p, concavity)
+    match method {
+        Some("convex") => convex(p),
+        Some("concave") => concave(p, concavity),
+        _ => convex(p),
     }
-}
-
-#[pyfunction]
-pub fn neighbors_matrix(py: Python,
-                        neighbors: Vec<Vec<usize>>,
-                        labels: Vec<usize>)
-                        -> &PyArray2<usize> {
-    spatial_weights_matrix(neighbors, &labels).into_pyarray(py)
 }
 
 
 #[pyfunction]
 pub fn points_neighbors(points: Vec<(f64, f64)>,
-                    labels: Option<Vec<usize>>,
-                    method: Option<&str>,
-                    r: Option<f64>,
-                    k: Option<usize>, )
-                    -> Vec<Vec<usize>> {
-
+                        labels: Option<Vec<usize>>,
+                        method: Option<&str>,
+                        r: Option<f64>,
+                        k: Option<usize>, )
+                        -> Vec<Vec<usize>> {
     let labels = py_kwarg(labels, (0..points.len()).into_iter().collect());
     let r = py_kwarg(r, -1.0);
     let mut k = py_kwarg(k, 0);
@@ -159,11 +137,11 @@ pub fn points_neighbors(points: Vec<(f64, f64)>,
 
 #[pyfunction]
 pub fn bbox_neighbors(bbox: Vec<(f64, f64, f64, f64)>,
-                  labels: Option<Vec<usize>>,
-                  expand: Option<f64>,
-                  scale: Option<f64>,
+                      labels: Option<Vec<usize>>,
+                      expand: Option<f64>,
+                      scale: Option<f64>,
 )
-                  -> Vec<Vec<usize>> {
+                      -> Vec<Vec<usize>> {
     let labels = py_kwarg(labels, (0..bbox.len()).into_iter().collect());
     let expand = py_kwarg(expand, -1.0);
     let scale = py_kwarg(scale, 1.3);
@@ -200,6 +178,14 @@ pub fn neighbor_components(neighbors: HashMap<usize, Vec<usize>>, types: HashMap
 }
 
 
+#[pyfunction]
+pub fn build_neighbors_matrix(neighbors: Vec<Vec<usize>>, labels: Vec<usize>)
+                              -> (usize, Vec<usize>, Vec<usize>, Vec<usize>, Vec<f64>)
+{
+    spatial_weights_sparse_matrix(neighbors, labels)
+}
+
+
 /// comb_bootstrap(x_status, y_status, neighbors, times=500, ignore_self=False)
 /// --
 ///
@@ -223,15 +209,14 @@ pub fn comb_bootstrap(
     x_status: Vec<bool>,
     y_status: Vec<bool>,
     neighbors: Vec<Vec<usize>>,
+    labels: Vec<usize>,
     times: Option<usize>,
     ignore_self: Option<bool>,
 )
-    -> f64 {
-
+    -> Result<f64, PyErr> {
     let times = py_kwarg(times, 1000);
     let ignore_self = py_kwarg(ignore_self, false);
-
-    let neighbors = utils::remove_rep_neighbors(neighbors, ignore_self);
+    let neighbors = utils::remove_rep_neighbors(neighbors, labels, ignore_self);
     let real: f64 = comb_count_neighbors(&x_status, &y_status, &neighbors) as f64;
 
     let perm_counts: Vec<usize> = (0..times)
@@ -249,10 +234,8 @@ pub fn comb_bootstrap(
     let sd = std_dev(&perm_counts);
     if sd != 0.0 {
         let z = (real - m) / sd;
-        zscore2pvalue(z, false)
-    } else { 1.0 }
-
-
+        Ok(zscore2pvalue(z, false))
+    } else { Ok(1.0) }
 }
 
 
@@ -334,31 +317,15 @@ impl CellCombs {
     fn bootstrap(
         &self,
         py: Python,
-        types: PyObject,
-        neighbors: PyObject,
+        types: Vec<&str>,
+        neighbors: Vec<Vec<usize>>,
+        labels: Vec<usize>,
         times: Option<usize>,
         pval: Option<f64>,
         method: Option<&str>,
         ignore_self: Option<bool>,
     )
         -> PyResult<PyObject> {
-        let types: Vec<&str> = match types.extract(py) {
-            Ok(data) => data,
-            Err(_) => {
-                return Err(PyTypeError::new_err(
-                    "Can't resolve `types`, should be list of string.",
-                ));
-            }
-        };
-        let neighbors: Vec<Vec<usize>> = match neighbors.extract(py) {
-            Ok(data) => data,
-            Err(_) => {
-                return Err(PyTypeError::new_err(
-                    "Can't resolve `neighbors`, should be a list.",
-                ));
-            }
-        };
-
         let cellcombs: Vec<(&str, &str)> = match self.cell_combs.extract(py) {
             Ok(data) => data,
             Err(_) => return Err(PyTypeError::new_err("Resolve cell_combs failed.")),
@@ -369,7 +336,7 @@ impl CellCombs {
         let method = py_kwarg(method, "pval");
         let ignore_self = py_kwarg(ignore_self, false);
 
-        let neighbors = remove_rep_neighbors(neighbors, ignore_self);
+        let neighbors = remove_rep_neighbors(neighbors, labels, ignore_self);
         let real_data = count_neighbors(&types, &neighbors, &cellcombs, self.order);
 
         let mut simulate_data = cellcombs
@@ -414,7 +381,7 @@ impl CellCombs {
                 let gt: f64 = gt / (times.to_owned() as f64 + 1.0);
                 let lt: f64 = lt / (times.to_owned() as f64 + 1.0);
                 let dir: f64 = (gt < lt) as i32 as f64;
-                let udir: f64 = - dir;
+                let udir: f64 = -dir;
                 let p: f64 = gt * dir + lt * udir;
                 let sig: f64 = (p < pval) as i32 as f64;
                 let sigv: f64 = sig * (dir - 0.5).signum();
@@ -430,8 +397,7 @@ impl CellCombs {
                     let sig: f64 = (p < pval) as i32 as f64;
                     let sigv: f64 = sig * (dir - 0.5).signum();
                     results.push((k.to_owned(), sigv));
-                } else { results.push((k.to_owned(), 1.0)) };
-
+                } else { results.push((k.to_owned(), 0.0)) };
             }
         }
 
@@ -443,35 +409,26 @@ impl CellCombs {
 
 
 #[pyfunction]
-pub fn moran_i<'py>(_py: Python<'py>,
-                    x: PyReadonlyArray1<f64>,
-                    w: PyReadonlyArray2<usize>,
-                    two_tailed: Option<bool>)
-                    -> (f64, f64) {
+pub fn spatial_autocorr(_py: Python,
+                        x: PyReadonlyArray2<f64>,
+                        neighbors: Vec<Vec<usize>>,
+                        labels: Vec<usize>,
+                        two_tailed: Option<bool>,
+                        method: Option<&str>)
+                        -> Vec<(f64, f64)> {
     let x = x.as_array();
-    let w = w.as_array();
     let two_tailed = py_kwarg(two_tailed, true);
-
-    moran_i_index(x, w, two_tailed)
-}
-
-
-#[pyfunction]
-pub fn geary_c<'py>(_py: Python<'py>,
-                    x: PyReadonlyArray1<f64>,
-                    w: PyReadonlyArray2<usize>,
-)
-                    -> (f64, f64) {
-    let x = x.as_array();
-    let w = w.as_array();
-
-    geary_c_index(x, w)
+    match method {
+        Some("moran_i") => moran_i_parallel(x, neighbors, labels, two_tailed),
+        Some("geary_c") => geary_c_parallel(x, neighbors, labels),
+        _ => moran_i_parallel(x, neighbors, labels, two_tailed), // default back to moran_i
+    }
 }
 
 
 #[pyfunction]
 pub fn fast_corr<'py>(py: Python<'py>, data1: PyReadonlyArray2<f64>, data2: PyReadonlyArray2<f64>, method: Option<&str>)
-                  -> &'py PyArray1<f64> {
+                      -> &'py PyArray1<f64> {
     let method: &str = match method {
         Some("pearson") => "p",
         Some("spearman") => "s",
@@ -485,87 +442,66 @@ pub fn fast_corr<'py>(py: Python<'py>, data1: PyReadonlyArray2<f64>, data2: PyRe
 }
 
 
-fn bbox_side_part(bbox: (f64, f64, f64, f64)) -> f64 {
+fn bbox_side_part(bbox: (f64, f64, f64, f64)) -> (f64, f64) {
+    // -> (min_side, max_side)
     let x_range = bbox.2 - bbox.0;
     let y_range = bbox.3 - bbox.1;
-    let min = if x_range <= y_range { x_range } else { y_range };
-    min / 10.0
+    if x_range <= y_range { (x_range, y_range) } else { (y_range, x_range) }
 }
 
 
 #[pyfunction]
-pub fn index_of_dispersion(points: Vec<(f64, f64)>,
-                       bbox: Option<(f64, f64, f64, f64)>,
-                       r: Option<f64>,
-                       resample: Option<usize>,
-                       pval: Option<f64>,
-                       min_cells: Option<usize>) -> (f64, f64, usize) {
-    let bbox = py_kwarg(bbox, point2bbox(points.to_owned()));
-    let r = py_kwarg(r, bbox_side_part(bbox));
+pub fn spatial_distribution_pattern(points_collections: Vec<Vec<(f64, f64)>>,
+                                    bbox: (f64, f64, f64, f64),
+                                    method: Option<&str>,
+                                    r: Option<f64>,
+                                    resample: Option<usize>,
+                                    quad: Option<(usize, usize)>,
+                                    rect_side: Option<(f64, f64)>,
+                                    pval: Option<f64>,
+                                    min_cells: Option<usize>) -> Vec<(f64, f64, usize)> {
+    let r = py_kwarg(r, bbox_side_part(bbox).0 / 10.0);
     let resample = py_kwarg(resample, 1000);
     let pval = py_kwarg(pval, 0.05);
     let min_cells = py_kwarg(min_cells, 10);
 
-    ix_dispersion(points, bbox, r, resample, pval, min_cells)
+    match method {
+        Some("id") => ix_dispersion_parallel(points_collections, bbox, r, resample, pval, min_cells),
+        Some("morisita") => morisita_parallel(points_collections, bbox, quad, rect_side, pval, min_cells),
+        Some("clark_evans") => clark_evans_parallel(points_collections, bbox, pval, min_cells),
+        _ => clark_evans_parallel(points_collections, bbox, pval, min_cells),
+    }
 }
 
 
 #[pyfunction]
-pub fn morisita_index(points: Vec<(f64, f64)>,
-                       bbox: (f64, f64, f64, f64),
-                       quad: Option<(usize, usize)>,
-                        rect_side: Option<(f64, f64)>,
-                       pval: Option<f64>,
-                       min_cells: Option<usize>) -> (f64, f64, usize) {
-    let pval = py_kwarg(pval, 0.05);
-    let min_cells = py_kwarg(min_cells, 10);
-
-    morisita_ix(points, bbox, quad, rect_side, pval, min_cells)
-}
-
-
-#[pyfunction]
-pub fn clark_evans_index(points: Vec<(f64, f64)>,
-                       bbox: (f64, f64, f64, f64),
-                       pval: Option<f64>,
-                       min_cells: Option<usize>) -> (f64, f64, usize) {
-    let pval = py_kwarg(pval, 0.05);
-    let min_cells = py_kwarg(min_cells, 10);
-
-    clark_evans_ix(points, bbox, pval, min_cells)
-}
-
-
-#[pyfunction]
-pub fn leibovici(points: Vec<(f64, f64)>,
-                 types: Vec<usize>,
-                 d: Option<f64>,
-                 order: Option<bool>) -> f64 {
-    let bbox = point2bbox(points.to_owned());
-    let d = py_kwarg(d, bbox_side_part(bbox));
+pub fn spatial_entropy(points_collections: Vec<Vec<(f64, f64)>>,
+                       types_collections: Vec<Vec<usize>>,
+                       d: Option<f64>,
+                       cut: Option<usize>,
+                       order: Option<bool>,
+                       method: Option<&str>,
+) -> Vec<f64> {
+    let bbox = point2bbox(points_collections[0].to_owned());
+    let d = py_kwarg(d, bbox_side_part(bbox).0 / 10.0);
+    let cut = py_kwarg(cut, 3);
     let order = py_kwarg(order, false);
-    leibovici_entropy(points, types, d, order)
-}
-
-
-#[pyfunction]
-pub fn altieri(points: Vec<(f64, f64)>,
-               types: Vec<usize>,
-               cut: Option<Vec<f64>>,
-               order: Option<bool>) -> f64 {
-    let order = py_kwarg(order, false);
-    altieri_entropy(points, types, cut, order)
+    match method {
+        Some("leibovici") => leibovici_parallel(points_collections, types_collections, d, order),
+        Some("altieri") => altieri_parallel(points_collections, types_collections, cut, order),
+        _ => leibovici_parallel(points_collections, types_collections, d, order),
+    }
 }
 
 
 #[pyfunction]
 pub fn getis_ord(points: Vec<(f64, f64)>,
-               bbox: (f64, f64, f64, f64),
-               search_level: Option<usize>,
-               quad: Option<(usize, usize)>,
-               rect_side: Option<(f64, f64)>,
-               pval: Option<f64>,
-               min_cells: Option<usize>,) -> Vec<bool> {
+                 bbox: (f64, f64, f64, f64),
+                 search_level: Option<usize>,
+                 quad: Option<(usize, usize)>,
+                 rect_side: Option<(f64, f64)>,
+                 pval: Option<f64>,
+                 min_cells: Option<usize>, ) -> Vec<bool> {
     let search_level = py_kwarg(search_level, 3);
     let pval = py_kwarg(pval, 0.05);
     let min_cells = py_kwarg(min_cells, 10);
