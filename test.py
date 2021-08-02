@@ -5,13 +5,9 @@ from spatialtis_core import (
     points_neighbors,
     bbox_neighbors,
     neighbor_components,
-    fast_corr,
     spatial_autocorr,
-    index_of_dispersion,
-    morisita_index,
-    clark_evans_index,
-    leibovici,
-    altieri,
+    spatial_distribution_pattern,
+    spatial_entropy,
     getis_ord,
     comb_bootstrap
 )
@@ -41,18 +37,26 @@ labels = [str(i) for i in range(1)]
 # print(f"scipy used {t2-t1:5f}")
 
 # get random points
-N = 100000  # number of points
+N = 100  # number of points
 points = [(x, y) for x, y in np.random.randn(N, 2)]
 types = np.random.randint(0, 30, N)
+#
+# id = spatial_distribution_pattern([points], (0, 0, 10, 10), method="id")
+# morisita = spatial_distribution_pattern([points], (0, 0, 10, 10), method="morisita")
+# ce = spatial_distribution_pattern([points], (0, 0, 10, 10), method="clark_evans")
+#
+# print(f"spatial dist {id} {morisita} {ce}")
+#
+# print(f"hotspot {getis_ord(points, (0, 0, 10, 10))}")
 
 
 t1 = time()
-e = leibovici(points, types.tolist())
+e = spatial_entropy([points], [types.tolist()], method="leibovici")
 t2 = time()
 print(f"Get leibovici entropy {e} used {t2 - t1:5f}")
 
 t1 = time()
-e = altieri(points, types.tolist())
+e = spatial_entropy([points, points], [types.tolist(), types.tolist()], method="altieri")
 t2 = time()
 print(f"Get altieri entropy {e} used {t2 - t1:5f}")
 

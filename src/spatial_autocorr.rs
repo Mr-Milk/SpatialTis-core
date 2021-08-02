@@ -1,15 +1,15 @@
-use ndarray::prelude::*;
-use ndarray::parallel::prelude::*;
+use itertools::min;
 use nalgebra_sparse::CsrMatrix;
+use nalgebra_sparse::ops::Op;
+use nalgebra_sparse::ops::serial::{spadd_csr_prealloc, spadd_pattern};
+use ndarray::parallel::prelude::*;
+use ndarray::prelude::*;
 
 use crate::utils::zscore2pvalue;
-use itertools::min;
-use nalgebra_sparse::ops::serial::{spadd_pattern, spadd_csr_prealloc};
-use nalgebra_sparse::ops::Op;
 
 // Acquire spatial weights matrix from neighbors relationships
 pub fn spatial_weights_sparse_matrix(neighbors: Vec<Vec<usize>>, labels: Vec<usize>)
-    -> (usize, Vec<usize>, Vec<usize>, Vec<usize>, Vec<f64>)
+                                     -> (usize, Vec<usize>, Vec<usize>, Vec<usize>, Vec<f64>)
 // (shape_n, indptr, indice (or called `col_index`), row_index, data)
 {
     let n = neighbors.len();
@@ -54,9 +54,9 @@ impl SpatialWeight {
         let w_sparse = CsrMatrix::try_from_csr_data(n, n, indptr, indice.to_owned(), data).unwrap();
         let w1_pattern = spadd_pattern(w_sparse.pattern(), w_sparse.transpose().pattern());
         let w1_len = w1_pattern.nnz();
-        let mut w1 = CsrMatrix::try_from_pattern_and_values(w1_pattern, vec![0.0;w1_len]).unwrap();
-        spadd_csr_prealloc(1.0, &mut w1, 1.0,  Op::NoOp(&w_sparse)).unwrap();
-        spadd_csr_prealloc(1.0, &mut w1, 1.0,  Op::Transpose(&w_sparse)).unwrap();
+        let mut w1 = CsrMatrix::try_from_pattern_and_values(w1_pattern, vec![0.0; w1_len]).unwrap();
+        spadd_csr_prealloc(1.0, &mut w1, 1.0, Op::NoOp(&w_sparse)).unwrap();
+        spadd_csr_prealloc(1.0, &mut w1, 1.0, Op::Transpose(&w_sparse)).unwrap();
         let w1_data: Array1<f64> = w1.values().iter().map(|i| *i).collect();
         let s1 = (&w1_data * &w1_data).sum() / 2.0;
         let w_sum0: Array1<f64> = w_sparse.transpose().row_iter().map(|row| row.values().iter().fold(0.0, |acc, a| acc + *a)).collect();
@@ -71,7 +71,7 @@ impl SpatialWeight {
             s1,
             s2,
             s02,
-            w_sparse
+            w_sparse,
         }
     }
 

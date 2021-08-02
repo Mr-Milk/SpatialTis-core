@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
 use counter::Counter;
+use itertools::min;
+use statrs::distribution::{ChiSquared, ContinuousCDF, Normal};
 
 use crate::stat::mean;
-use statrs::distribution::{Normal, ContinuousCDF, ChiSquared};
-use itertools::min;
 
 pub fn py_kwarg<T>(arg: Option<T>, default_value: T) -> T {
     match arg {
