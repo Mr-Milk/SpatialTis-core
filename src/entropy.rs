@@ -1,9 +1,5 @@
-use std::collections::HashMap;
-
-use counter::Counter;
 use itertools_num::linspace;
 use ndarray::prelude::*;
-use ndarray_stats::QuantileExt;
 use rayon::prelude::*;
 
 use crate::neighbors_search::points_neighbors_kdtree;
@@ -70,7 +66,6 @@ pub fn altieri_entropy(points: Vec<(f64, f64)>, types: Vec<usize>, cut: usize, o
     }
 
     let pmax = ptypes.iter().fold(0, |acc, a| { if *a > acc { *a } else { acc } });
-
     let mut zw = vec![];
     let mut w = vec![];
     for c in cut_range {
@@ -163,7 +158,16 @@ fn pairs_counter(pairs: Vec<usize>, n: usize) -> Vec<f64> {
 
 fn normalized_pairs_counts(pairs_counts: Array1<f64>) -> Array1<f64> {
     let s = &pairs_counts.sum();
-    pairs_counts / *s
+
+    let mut arr: Vec<f64> = vec![];
+    if *s != 0.0 {
+        for c in pairs_counts {
+            if c != 0.0 { arr.push(c / *s) }
+        }
+    }
+
+    Array::from_vec(arr)
+
 }
 
 
@@ -171,7 +175,7 @@ fn normalized_pairs_counts(pairs_counts: Array1<f64>) -> Array1<f64> {
 mod tests {
     use ndarray::prelude::*;
 
-    use crate::entropy::{dist_cutoff_mask_arr, euclidean_distance, pdist_2d};
+    use crate::entropy::{dist_cutoff_mask_arr, euclidean_distance, pdist_2d, leibovici_entropy, altieri_entropy};
 
     #[test]
     fn test_euclidean_dist() {
@@ -186,5 +190,21 @@ mod tests {
     #[test]
     fn test_pdist() {
         assert_eq!(pdist_2d(vec![(1.0, 0.0), (2.0, 0.0), (3.0, 0.0)]), vec![1.0, 2.0, 1.0]);
+    }
+
+    #[test]
+    fn test_leibovici() {
+        let points = vec![(1.0, 0.0), (3.0, 0.0), (1.0, 6.0), (3.0, 11.0)];
+        let types = vec![1,2,1,1];
+        let e = leibovici_entropy(points, types, 2.0, false);
+        println!("leibovici entropy is {:?}", e);
+    }
+
+    #[test]
+    fn test_altieri() {
+        let points = vec![(1.0, 0.0), (3.0, 0.0), (1.0, 6.0), (3.0, 11.0)];
+        let types = vec![1,2,1,1];
+        let e = altieri_entropy(points, types, 2, false);
+        println!("altieri entropy is {:?}", e);
     }
 }
