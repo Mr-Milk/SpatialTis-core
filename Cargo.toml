@@ -27,13 +27,13 @@ rstar = "0.9.1"
 delaunator = "0.2.1"
 geo = "0.18.0"
 counter = "0.5.2"
-anyhow = "1.0.41"
+anyhow = "1.0.43"
 ndarray = { version = "0.15.3", features =['rayon'] }
 ndarray-stats = "0.5.0"
 num-traits = "0.2.14"
 statrs = "0.15.0"
 numpy = "0.14.1"
-nalgebra-sparse = "0.4.0"
+nalgebra-sparse = "0.5.0"
 hashbag = "0.1.3"
 
 [profile.dev]
