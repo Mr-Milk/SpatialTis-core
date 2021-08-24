@@ -1,6 +1,8 @@
 from .spatialtis_core import (
-    multi_points_bbox,
-    points2bbox,
+    points_bbox,
+    multipoints_bbox,
+    polygons_area,
+    multipolygons_area,
     points2shapes,
     points_neighbors,
     bbox_neighbors,
@@ -12,7 +14,10 @@ from .spatialtis_core import (
     getis_ord,
     comb_bootstrap,
     CellCombs,
+    fast_corr,
 )
+
+from .spatial_de import somde
 
 from scipy.sparse import csr_matrix
 from typing import List
@@ -22,3 +27,4 @@ def spatial_weight(neighbors: List[List[int]], labels: List[int]) -> csr_matrix:
     """Build a neighbors sparse matrix from neighbors data"""
     shape_n, indptr, col_index, row_index, data = build_neighbors_matrix(neighbors, labels)
     return csr_matrix((data, col_index, indptr))
+

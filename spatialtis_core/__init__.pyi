@@ -2,14 +2,14 @@ from typing import List, Tuple, Dict, Optional
 
 import numpy as np
 
-Points = List[Tuple[float, float]]
-BoundingBox = Tuple[float, float, float, float]
-Neighbors = List[List[int]]
-Labels = List[int]
+Points: List[Tuple[float, float]] = List[Tuple[float, float]]
+BoundingBox: Tuple[float, float, float, float] = Tuple[float, float, float, float]
+Neighbors: List[List[int]] = List[List[int]]
+Labels: List[int] = List[int]
 
 
-def multi_points_bbox(points: Points) -> BoundingBox:
-    """Return minimum bounding box of a list of points
+def points_bbox(points: Points) -> BoundingBox:
+    """Return minimum bounding box of points
 
     Args:
         points: A list of points
@@ -21,12 +21,8 @@ def multi_points_bbox(points: Points) -> BoundingBox:
     ...
 
 
-def points2bbox(points_collections: List[Points]) -> List[BoundingBox]:
-    """
-    points2bbox(points_collections)
-    --
-
-    A utility function to return minimum bounding box list of polygons
+def multipoints_bbox(points_collections: List[Points]) -> List[BoundingBox]:
+    """A utility function to return minimum bounding box list of polygons
 
     Args:
         points_collections: List of 2d points collections
@@ -35,6 +31,31 @@ def points2bbox(points_collections: List[Points]) -> List[BoundingBox]:
         A list of bounding box (minx, miny, maxx, maxy)
 
     """
+    ...
+
+
+def polygons_area(points: Points) -> float:
+    """Calculate the area of polygons using shoelace formula
+
+    Args:
+        points: A list of points represents a polygon
+
+    Return:
+        The area of the polygon
+
+    """
+    ...
+
+def multipolygons_area(points_collections: List[Points]) -> List[float]:
+    """Calculate the area of polygons using shoelace formula
+
+        Args:
+            points_collections: List of 2d points collections, represents a list of polygons
+
+        Return:
+            The area of the polygons in list
+
+        """
     ...
 
 
@@ -225,8 +246,8 @@ def getis_ord(points: Points,
     ...
 
 
-def comb_bootstrap(x_status: List[bool], y_status: List[bool], neighbors: Neighbors,
-                   labels: Labels, times: int = 1000, ignore_self: bool = False) -> float:
+def comb_bootstrap(exp_matrix: np.ndarray, markers: List[str], neighbors: Neighbors, labels: Labels,
+                   pval: float = 0.01, order: bool = False, times: int = 1000, ignore_self: bool = False) -> List[Tuple[str, str, float]]:
     """
     Bootstrap between two types
 
@@ -260,7 +281,7 @@ class CellCombs:
     def __init__(self, types: List[str], order: bool = False): ...
 
     def bootstrap(self, types: List[str], neighbors: Neighbors, labels: Labels, times: int = 1000, pval: float = 0.05,
-                  method: str = 'pval', ignore_self: bool = False) -> List[Tuple[Tuple[str, str], float]]:
+                  method: str = 'pval', ignore_self: bool = False) -> List[Tuple[str, str, float]]:
         """
         Bootstrap functions
 
