@@ -23,6 +23,11 @@ jobs:
           target: aarch64-apple-darwin
           profile: minimal
           default: true
+      - name: Install depedencies & Test dev
+        uses: messense/maturin-action@v1
+        with:
+          command: develop
+          target: ${{ matrix.platform.target }}
       - name: Build wheels - x86_64
         uses: messense/maturin-action@v1
         with:
@@ -58,6 +63,11 @@ jobs:
           target: ${{ matrix.platform.target }}
           profile: minimal
           default: true
+      - name: Install depedencies & Test dev
+        uses: messense/maturin-action@v1
+        with:
+          command: develop
+          target: ${{ matrix.platform.target }}
       - name: Build wheels
         uses: messense/maturin-action@v1
         with:
@@ -90,6 +100,11 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install depedencies & Test dev
+        uses: messense/maturin-action@v1
+        with:
+          command: develop
+          target: ${{ matrix.platform.target }}
       - name: Build Wheels
         uses: messense/maturin-action@v1
         with:
