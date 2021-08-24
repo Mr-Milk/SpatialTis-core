@@ -1,0 +1,4 @@
+spatialtis_core
+Sphinx
+sphinx-autoapi
+sphinx-material
