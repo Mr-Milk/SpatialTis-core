@@ -2,12 +2,18 @@ use geo::algorithm::bounding_rect::BoundingRect;
 use geo::algorithm::concave_hull::ConcaveHull;
 use geo::algorithm::convex_hull::ConvexHull;
 use geo::algorithm::coords_iter::CoordsIter;
-use geo::LineString;
+use geo::{LineString, Polygon};
+use geo::algorithm::area::Area;
 
-pub fn point2bbox(p: Vec<(f64, f64)>) -> (f64, f64, f64, f64) { // minx, miny, maxx, maxy
+pub fn points2bbox(p: Vec<(f64, f64)>) -> (f64, f64, f64, f64) { // minx, miny, maxx, maxy
     let line_string: LineString<f64> = p.into();
     let bounding_rect = line_string.bounding_rect().unwrap();
     (bounding_rect.min().x, bounding_rect.min().y, bounding_rect.max().x, bounding_rect.max().y)
+}
+
+pub fn polygon_area(p: Vec<(f64, f64)>) -> f64 {
+    let polygon = Polygon::new(LineString::from(p), vec![]);
+    polygon.unsigned_area()
 }
 
 pub fn concave(p: Vec<(f64, f64)>, concavity: f64) -> Vec<(f64, f64)> {

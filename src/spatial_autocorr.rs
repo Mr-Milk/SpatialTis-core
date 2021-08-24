@@ -93,21 +93,21 @@ impl SpatialWeight {
 }
 
 
-pub fn moran_i_parallel(x: ArrayView2<f64>, neighbors: Vec<Vec<usize>>, labels: Vec<usize>, two_tailed: bool) -> Vec<(f64, f64)> {
+pub fn moran_i_parallel(x: ArrayView2<f64>, neighbors: Vec<Vec<usize>>, labels: Vec<usize>, two_tailed: bool, pval: f64) -> Vec<(f64, f64, f64)> {
     let w = SpatialWeight::from_neighbors(neighbors, labels);
-    x.axis_iter(Axis(0)).into_par_iter().map(|row| moran_i_index(row, w.clone(), two_tailed)).collect()
+    x.outer_iter().into_par_iter().map(|row| moran_i_index(row, w.clone(), two_tailed, pval)).collect()
 }
 
 
-pub fn geary_c_parallel(x: ArrayView2<f64>, neighbors: Vec<Vec<usize>>, labels: Vec<usize>) -> Vec<(f64, f64)> {
+pub fn geary_c_parallel(x: ArrayView2<f64>, neighbors: Vec<Vec<usize>>, labels: Vec<usize>, pval: f64) -> Vec<(f64, f64, f64)> {
     let w = SpatialWeight::from_neighbors(neighbors, labels);
     let mut result = vec![];
-    x.axis_iter(Axis(0)).into_par_iter().map(|row| geary_c_index(row, w.clone())).collect_into_vec(&mut result);
+    x.outer_iter().into_par_iter().map(|row| geary_c_index(row, w.clone(), pval)).collect_into_vec(&mut result);
     result
 }
 
 
-pub fn moran_i_index(x: ArrayView1<f64>, w: SpatialWeight, two_tailed: bool) -> (f64, f64)
+pub fn moran_i_index(x: ArrayView1<f64>, w: SpatialWeight, two_tailed: bool, pval: f64) -> (f64, f64, f64)
 {
     let n: f64 = x.len() as f64;
     let s0 = w.w_sum;
@@ -131,11 +131,11 @@ pub fn moran_i_index(x: ArrayView1<f64>, w: SpatialWeight, two_tailed: bool) -> 
     let se_i_norm = vi_norm.powf(1.0 / 2.0);
     let z_norm = (i_value - ei) / se_i_norm;
     let p_norm = zscore2pvalue(z_norm, two_tailed);
-
-    (i_value, p_norm)
+    let pattern: f64 = if p_norm < pval { (i_value - ei).signum() } else { 0.0 };
+    (pattern, i_value, p_norm)
 }
 
-pub fn geary_c_index(x: ArrayView1<f64>, w: SpatialWeight) -> (f64, f64) {
+pub fn geary_c_index(x: ArrayView1<f64>, w: SpatialWeight, pval: f64) -> (f64, f64, f64) {
     let n: f64 = x.len() as f64;
     let s1 = w.s1;
     let s2 = w.s2;
@@ -170,6 +170,7 @@ pub fn geary_c_index(x: ArrayView1<f64>, w: SpatialWeight) -> (f64, f64) {
     let de = c_value - 1.0;
     let z_norm = de / se_c_norm;
     let p_norm = zscore2pvalue(z_norm, false);
+    let pattern: f64 = if p_norm < pval { (1.0 - c_value).signum() } else { 0.0 };
 
-    (c_value, p_norm)
+    (pattern, c_value, p_norm)
 }

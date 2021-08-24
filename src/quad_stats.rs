@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::geo::point2bbox;
+use crate::geo::points2bbox;
 use crate::stat::floordiv;
 
 pub struct QuadStats {
@@ -26,7 +26,7 @@ impl QuadStats {
     ) -> HashMap<usize, usize> {
         let bbox = match bbox {
             Some(data) => data,
-            _ => point2bbox(points.to_owned())
+            _ => points2bbox(points.to_owned())
         }; // if bbox is not provide, calculate it for user
 
         let width = bbox.2 - bbox.0;

@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use counter::Counter;
 use itertools::Itertools;
-use numpy::{PyArray1, PyReadonlyArray2, ToPyArray};
+use ndarray::prelude::*;
+use numpy::{PyArray1, PyReadonlyArray2, ToPyArray, PyArray2, PyReadonlyArray1, PyReadonlyArray};
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use rand::seq::SliceRandom;
@@ -11,7 +12,7 @@ use rayon::prelude::*;
 
 use crate::distribution_index::{clark_evans_parallel, ix_dispersion_parallel, morisita_parallel};
 use crate::entropy::{altieri_parallel, leibovici_parallel};
-use crate::geo::{concave, convex, point2bbox};
+use crate::geo::{concave, convex, points2bbox, polygon_area};
 use crate::hotspot::hotspot;
 use crate::neighbors_search::{bbox_neighbors_rtree,
                               init_bbox,
@@ -20,6 +21,7 @@ use crate::neighbors_search::{bbox_neighbors_rtree,
 use crate::spatial_autocorr::{geary_c_parallel, moran_i_parallel, spatial_weights_sparse_matrix};
 use crate::stat::{mean, std_dev};
 use crate::utils::{comb_count_neighbors, count_neighbors, py_kwarg, remove_rep_neighbors, zscore2pvalue};
+use std::hash::Hash;
 
 mod preprocessing;
 mod utils;
@@ -36,8 +38,10 @@ mod entropy;
 #[pymodule]
 fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
     // geometry processing
-    m.add_wrapped(wrap_pyfunction!(multi_points_bbox))?;
-    m.add_wrapped(wrap_pyfunction!(points2bbox))?;
+    m.add_wrapped(wrap_pyfunction!(points_bbox))?;
+    m.add_wrapped(wrap_pyfunction!(multipoints_bbox))?;
+    m.add_wrapped(wrap_pyfunction!(polygons_area))?;
+    m.add_wrapped(wrap_pyfunction!(multipolygons_area))?;
     m.add_wrapped(wrap_pyfunction!(points2shapes))?;
 
     // corr & neighbor depdent markers
@@ -67,29 +71,33 @@ fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
     Ok(())
 }
 
-/// points2bbox(points_collections)
-/// --
-///
-/// A utility function to return minimum bounding box list of polygons
-///
-/// Args:
-///     points_collections: List[List[(float, float)]]; List of 2d points collections
-///
-/// Return:
-///     A list of bounding box
+
 #[pyfunction]
-pub fn points2bbox(points_collections: Vec<Vec<(f64, f64)>>)
+pub fn multipoints_bbox(points_collections: Vec<Vec<(f64, f64)>>)
                    -> Vec<(f64, f64, f64, f64)> {
     points_collections.into_iter()
-        .map(|p| point2bbox(p))
+        .map(|p| points2bbox(p))
         .collect()
 }
 
 #[pyfunction]
-pub fn multi_points_bbox(points: Vec<(f64, f64)>)
+pub fn points_bbox(points: Vec<(f64, f64)>)
                          -> (f64, f64, f64, f64) {
-    point2bbox(points)
+    points2bbox(points)
 }
+
+#[pyfunction]
+pub fn polygons_area(points: Vec<(f64, f64)>) -> f64 {
+    polygon_area(points)
+}
+
+#[pyfunction]
+pub fn multipolygons_area(points_collections: Vec<Vec<(f64, f64)>>) -> Vec<f64> {
+    points_collections.into_iter()
+        .map(|p| polygon_area(p))
+        .collect()
+}
+
 
 #[pyfunction]
 pub fn points2shapes(p: Vec<(f64, f64)>, method: Option<&str>, concavity: Option<f64>)
@@ -152,29 +160,28 @@ pub fn bbox_neighbors(bbox: Vec<(f64, f64, f64, f64)>,
 
 // compute the number of different cells at neighbors
 #[pyfunction]
-pub fn neighbor_components(neighbors: HashMap<usize, Vec<usize>>, types: HashMap<usize, &str>)
-                           -> (Vec<usize>, Vec<&str>, Vec<Vec<usize>>) {
+pub fn neighbor_components<'py>(py: Python<'py>, neighbors: Vec<Vec<usize>>, labels: Vec<usize>, types: Vec<&'py str>)
+                           -> (Vec<&'py str>, Vec<Vec<usize>>) {
     let mut uni_types: HashMap<&str, i64> = HashMap::new();
-    for (_, t) in &types {
-        uni_types.entry(*t).or_insert(0);
+    let mut types_mapper: HashMap<usize, &str> = HashMap::new();
+    for (i, t) in labels.iter().zip(types.iter()) {
+        types_mapper.insert(*i, t);
+        uni_types.entry(t).or_insert(0);
     }
-    let uni_types: Vec<&str> = uni_types.keys().map(|k| *k).collect_vec();
-    let mut cent_order: Vec<usize> = vec![];
-    let result: Vec<Vec<usize>> = neighbors.iter().map(|(cent, neigh)| {
-        let count: HashMap<&&str, usize> = neigh.iter().map(|i| &types[i]).collect::<Counter<_>>().into_map();
-        let mut result_v: Vec<usize> = vec![];
-        for t in &uni_types {
-            let v = match count.get(t) {
+    let uni_types: Vec<&str> = uni_types.keys().map(|k| *k).collect();
+    let result: Vec<Vec<usize>> = neighbors.iter().map(|neigh| {
+        let count: HashMap<&&str, usize> = neigh.iter().map(|i| types_mapper.get(i).unwrap()).collect::<Counter<_>>().into_map();
+        let result_v: Vec<usize> = uni_types.iter().map(|t| {
+            let v: usize = match count.get(&t) {
                 Some(v) => *v,
                 None => { 0 }
             };
-            result_v.push(v);
-        }
-        cent_order.push(*cent);
+            v
+        }).collect();
         result_v
     }).collect();
 
-    (cent_order, uni_types, result)
+    (uni_types, result)
 }
 
 
@@ -202,40 +209,65 @@ pub fn build_neighbors_matrix(neighbors: Vec<Vec<usize>>, labels: Vec<usize>)
 ///     ignore_self: bool (False); Whether to consider self as a neighbor
 ///
 /// Return:
-///     The p-value for the spatial relationship between X and Y
+///     The spatial relationship between X and Y
 ///
 #[pyfunction]
 pub fn comb_bootstrap(
-    x_status: Vec<bool>,
-    y_status: Vec<bool>,
+    py: Python,
+    exp_matrix: PyReadonlyArray2<bool>,
+    markers: Vec<&str>,
     neighbors: Vec<Vec<usize>>,
     labels: Vec<usize>,
+    pval: Option<f64>,
+    order: Option<bool>,
     times: Option<usize>,
     ignore_self: Option<bool>,
 )
-    -> Result<f64, PyErr> {
+    -> Result<PyObject, PyErr> {
+    let exp_matrix: ArrayView2<bool> = exp_matrix.as_array();
     let times = py_kwarg(times, 1000);
     let ignore_self = py_kwarg(ignore_self, false);
+    let order = py_kwarg(order, false);
+    let pval = py_kwarg(pval, 0.05);
     let neighbors = utils::remove_rep_neighbors(neighbors, labels, ignore_self);
-    let real: f64 = comb_count_neighbors(&x_status, &y_status, &neighbors) as f64;
+    let mut results = vec![];
+    for comb in (0..markers.len()).combinations_with_replacement(2) {
+        let x_status = exp_matrix.slice(s![comb[0], ..]).to_vec();
+        let y_status = exp_matrix.slice(s![comb[1], ..]).to_vec();
+        let p = xy_comb(&x_status, &y_status, &neighbors, times, pval);
+        results.push((markers[comb[0]], markers[comb[1]], p));
+        if order {
+            let p_ = xy_comb(&y_status, &x_status, &neighbors, times, pval);
+            results.push((markers[comb[1]], markers[comb[0]], p_));
+        } else {
+            results.push((markers[comb[1]], markers[comb[0]], p));
+        }
+    }
 
+    Ok(results.to_object(py))
+}
+
+
+fn xy_comb(x_status: &Vec<bool>, y_status: &Vec<bool>, neighbors: &Vec<Vec<usize>>, times: usize, pval: f64) -> f64 {
+    let real: f64 = comb_count_neighbors(x_status, y_status, &neighbors) as f64;
     let perm_counts: Vec<usize> = (0..times)
         .into_par_iter()
         .map(|_| {
             let mut rng = thread_rng();
             let mut shuffle_y = y_status.to_owned();
             shuffle_y.shuffle(&mut rng);
-            let perm_result = comb_count_neighbors(&x_status, &shuffle_y, &neighbors);
+            let perm_result = comb_count_neighbors(x_status, &shuffle_y, &neighbors);
             perm_result
         })
         .collect();
 
-    let m = mean(&perm_counts);
-    let sd = std_dev(&perm_counts);
-    if sd != 0.0 {
-        let z = (real - m) / sd;
-        Ok(zscore2pvalue(z, false))
-    } else { Ok(1.0) }
+        let m = mean(&perm_counts);
+        let sd = std_dev(&perm_counts);
+        if sd != 0.0 {
+            let z = (real - m) / sd;
+            let pvalue = zscore2pvalue(z, false);
+            if pvalue < pval { z.signum() } else { 0.0 }
+        } else { 0.0 }
 }
 
 
@@ -273,23 +305,15 @@ impl CellCombs {
 
         let order = py_kwarg(order, false);
         let uni: Vec<&str> = types_data.into_iter().unique().collect();
-        let mut combs = vec![];
-
-        if order {
-            for i1 in uni.to_owned() {
-                for i2 in uni.to_owned() {
-                    combs.push((i1, i2));
-                }
-            }
+        let mut combs: Vec<Vec<&str>> = if order {
+            uni.to_owned().into_iter().permutations(2).collect()
         } else {
-            for (i1, e1) in uni.to_owned().iter().enumerate() {
-                for (i2, e2) in uni.to_owned().iter().enumerate() {
-                    if i2 >= i1 {
-                        combs.push((e1, e2));
-                    }
-                }
-            }
-        }
+            uni.to_owned().into_iter().combinations(2).collect()
+        };
+        // Add self-self relationship
+        for i in &uni {
+            combs.push(vec![*i, *i])
+        };
 
         Ok(CellCombs {
             cell_types: uni.to_object(py),
@@ -312,7 +336,7 @@ impl CellCombs {
     ///     ignore_self: bool (False); Whether to consider self as a neighbor
     ///
     /// Return:
-    ///     List of tuples, eg.(('a', 'b'), 1.0), the type a and type b has a relationship as association
+    ///     List of tuples, eg.('a', 'b', 1.0), the type a and type b has a relationship as association
     ///
     fn bootstrap(
         &self,
@@ -330,6 +354,7 @@ impl CellCombs {
             Ok(data) => data,
             Err(_) => return Err(PyTypeError::new_err("Resolve cell_combs failed.")),
         };
+        let order: bool = self.order;
 
         let times = py_kwarg(times, 1000);
         let pval = py_kwarg(pval, 0.05);
@@ -362,10 +387,10 @@ impl CellCombs {
             }
         }
 
-        let mut results: Vec<((&str, &str), f64)> = Vec::with_capacity(simulate_data.len());
+        let mut results: Vec<(&str, &str, f64)> = Vec::with_capacity(simulate_data.len());
 
-        for (k, v) in simulate_data.iter() {
-            let real = real_data[k];
+        for (k, v) in simulate_data.into_iter() {
+            let real = real_data[&k];
 
             if method == "pval" {
                 let mut gt: f64 = 0.0;
@@ -385,19 +410,21 @@ impl CellCombs {
                 let p: f64 = gt * dir + lt * udir;
                 let sig: f64 = (p < pval) as i32 as f64;
                 let sigv: f64 = sig * (dir - 0.5).signum();
-                results.push((k.to_owned(), sigv));
+                results.push((k.0, k.1, sigv));
+                if !order { results.push((k.1, k.0, sigv)) }
             } else {
-                let m = mean(v);
-                let sd = std_dev(v);
+                let m = mean(&v);
+                let sd = std_dev(&v);
 
-                if sd != 0.0 {
+                let sigv = if sd != 0.0 {
                     let z = (real - m) / sd;
                     let p = zscore2pvalue(z, false);
                     let dir: f64 = (z > 0.0) as i32 as f64;
                     let sig: f64 = (p < pval) as i32 as f64;
-                    let sigv: f64 = sig * (dir - 0.5).signum();
-                    results.push((k.to_owned(), sigv));
-                } else { results.push((k.to_owned(), 0.0)) };
+                    sig * (dir - 0.5).signum()
+                } else { 0.0 };
+                results.push((k.0, k.1, sigv));
+                if !order { results.push((k.1, k.0, sigv)) }
             }
         }
 
@@ -414,14 +441,16 @@ pub fn spatial_autocorr(_py: Python,
                         neighbors: Vec<Vec<usize>>,
                         labels: Vec<usize>,
                         two_tailed: Option<bool>,
+                        pval: Option<f64>,
                         method: Option<&str>)
-                        -> Vec<(f64, f64)> {
+                        -> Vec<(f64, f64, f64)> {
     let x = x.as_array();
     let two_tailed = py_kwarg(two_tailed, true);
+    let pval = py_kwarg(pval, 0.05);
     match method {
-        Some("moran_i") => moran_i_parallel(x, neighbors, labels, two_tailed),
-        Some("geary_c") => geary_c_parallel(x, neighbors, labels),
-        _ => moran_i_parallel(x, neighbors, labels, two_tailed), // default back to moran_i
+        Some("moran_i") => moran_i_parallel(x, neighbors, labels, two_tailed, pval),
+        Some("geary_c") => geary_c_parallel(x, neighbors, labels, pval),
+        _ => moran_i_parallel(x, neighbors, labels, two_tailed, pval), // default back to moran_i
     }
 }
 
@@ -482,7 +511,7 @@ pub fn spatial_entropy(points_collections: Vec<Vec<(f64, f64)>>,
                        order: Option<bool>,
                        method: Option<&str>,
 ) -> Vec<f64> {
-    let bbox = point2bbox(points_collections[0].to_owned());
+    let bbox = points2bbox(points_collections[0].to_owned());
     let d = py_kwarg(d, bbox_side_part(bbox).0 / 10.0);
     let cut = py_kwarg(cut, 3);
     let order = py_kwarg(order, false);
