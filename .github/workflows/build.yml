@@ -25,7 +25,7 @@ jobs:
           default: true
       - name: Install depedencies
         run: |
-          pip install scipy torch torch-geometric pytorch-lightning somoclu
+          pip install numpy pandas scipy torch torch-geometric pytorch-lightning somoclu
       - name: Build wheels - x86_64
         uses: messense/maturin-action@v1
         with:
@@ -63,7 +63,7 @@ jobs:
           default: true
       - name: Install depedencies
         run: |
-          pip install scipy torch torch-geometric pytorch-lightning somoclu
+          pip install numpy pandas scipy torch torch-geometric pytorch-lightning somoclu
       - name: Build wheels
         uses: messense/maturin-action@v1
         with:
@@ -98,7 +98,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install depedencies
         run: |
-          pip install scipy torch torch-geometric pytorch-lightning somoclu
+          pip install numpy pandas scipy torch torch-geometric pytorch-lightning somoclu
       - name: Build Wheels
         uses: messense/maturin-action@v1
         with:
