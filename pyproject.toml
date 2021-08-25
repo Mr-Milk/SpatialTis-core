@@ -5,9 +5,9 @@ build-backend = "maturin"
 [project]
 name = "spatialtis_core"
 dependencies = [
-    'scipy >= 1.7.1',
-    'torch >= 1.8.0',
-    'torch-geometric >= 1.7.0',
-    'pytorch-lightning >= 1.4.0',
-    'somoclu >= 1.7.0'
+    'scipy',
+    'torch',
+    'torch-geometric',
+    'pytorch-lightning',
+    'somoclu'
 ]
