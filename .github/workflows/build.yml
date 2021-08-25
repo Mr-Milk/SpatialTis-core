@@ -101,6 +101,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
           manylinux: auto
+          rust-toolchain: nightly
           args: -i python${{ matrix.python-version }} --release --out dist --no-sdist
       - name: Install built wheel
         run: |
