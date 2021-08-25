@@ -16,7 +16,8 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - run: where pip | which pip | pip install numpy pandas scipy torch torch-geometric pytorch-lightning somoclu
+      - run: pip install numpy pandas scipy torch torch-geometric pytorch-lightning
+      - run: pip install somoclu
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -52,7 +53,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.platform.python-architecture }}
-      - run: where pip | which pip | pip install numpy pandas scipy torch torch-geometric pytorch-lightning somoclu
+      - run: pip install numpy pandas scipy torch torch-geometric pytorch-lightning
+      - run: pip install somoclu
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -86,7 +88,8 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - run: where pip | which pip | pip install numpy pandas scipy torch torch-geometric pytorch-lightning somoclu
+      - run: pip install numpy pandas scipy torch torch-geometric pytorch-lightning
+      - run: pip install somoclu
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
