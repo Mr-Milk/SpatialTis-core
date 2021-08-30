@@ -64,7 +64,13 @@ html_favicon = '_static/Logo.svg'
 html_logo = '_static/Logo.svg'
 
 # config autoapi
-autoapi_options = ['members', 'imported-members']
+autoapi_options = ['members',
+                   'undoc-members',
+                   'private-members',
+                   'show-inheritance',
+                   # 'show-module-summary',
+                   'special-members',
+                   'imported-members', ]
 autoapi_dirs = ['../spatialtis_core']
 autoapi_file_patterns = ['*.pyi']
 autoapi_member_order = "groupwise"
