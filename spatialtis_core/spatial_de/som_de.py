@@ -16,9 +16,9 @@ def somde(exp: pd.DataFrame,
 
     Args:
         exp: A dataframe, gene name as index, spatial points as columns
-        coord: N*2 array of coordinations
+        coord: N*2 array of coordination
         k: Number of SOM nodes
-        alpha: Parameters for generate pesudo gene expression
+        alpha: Parameters for generate pseudo gene expression
         epoch: Number of epoch
         qval: Threshold for pval
         pval: Threshold for pval

@@ -9,5 +9,6 @@ dependencies = [
     'torch',
     'torch-geometric',
     'pytorch-lightning',
-    'somoclu'
+    'somoclu',
+    'patsy'
 ]
