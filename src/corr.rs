@@ -1,8 +1,6 @@
 use ndarray::prelude::*;
-use ndarray::parallel::prelude::*;
 
 use crate::stat::correlation;
-use rayon::iter::IntoParallelRefIterator;
 
 pub fn cross_corr(data1: ArrayView2<f64>, data2: ArrayView2<f64>, method: &str) -> Array1<f64> {
     let n = data1.shape()[0];

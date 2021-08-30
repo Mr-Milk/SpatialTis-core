@@ -1,9 +1,9 @@
+use geo::{LineString, Polygon};
+use geo::algorithm::area::Area;
 use geo::algorithm::bounding_rect::BoundingRect;
 use geo::algorithm::concave_hull::ConcaveHull;
 use geo::algorithm::convex_hull::ConvexHull;
 use geo::algorithm::coords_iter::CoordsIter;
-use geo::{LineString, Polygon};
-use geo::algorithm::area::Area;
 
 pub fn points2bbox(p: Vec<(f64, f64)>) -> (f64, f64, f64, f64) { // minx, miny, maxx, maxy
     let line_string: LineString<f64> = p.into();

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use counter::Counter;
 use itertools::Itertools;
 use ndarray::prelude::*;
-use numpy::{PyArray1, PyReadonlyArray2, ToPyArray, PyArray2, PyReadonlyArray1, PyReadonlyArray};
+use numpy::{PyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use rand::seq::SliceRandom;
@@ -21,7 +21,6 @@ use crate::neighbors_search::{bbox_neighbors_rtree,
 use crate::spatial_autocorr::{geary_c_parallel, moran_i_parallel, spatial_weights_sparse_matrix};
 use crate::stat::{mean, std_dev};
 use crate::utils::{comb_count_neighbors, count_neighbors, py_kwarg, remove_rep_neighbors, zscore2pvalue};
-use std::hash::Hash;
 
 mod preprocessing;
 mod utils;
@@ -42,7 +41,7 @@ fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(multipoints_bbox))?;
     m.add_wrapped(wrap_pyfunction!(polygons_area))?;
     m.add_wrapped(wrap_pyfunction!(multipolygons_area))?;
-    m.add_wrapped(wrap_pyfunction!(points2shapes))?;
+    m.add_wrapped(wrap_pyfunction!(points_shapes))?;
 
     // corr & neighbor depdent markers
     m.add_wrapped(wrap_pyfunction!(fast_corr))?;
@@ -100,7 +99,7 @@ pub fn multipolygons_area(points_collections: Vec<Vec<(f64, f64)>>) -> Vec<f64> 
 
 
 #[pyfunction]
-pub fn points2shapes(p: Vec<(f64, f64)>, method: Option<&str>, concavity: Option<f64>)
+pub fn points_shapes(p: Vec<(f64, f64)>, method: Option<&str>, concavity: Option<f64>)
                      -> Vec<(f64, f64)> {
     let concavity = py_kwarg(concavity, 1.5);
     match method {
@@ -160,8 +159,8 @@ pub fn bbox_neighbors(bbox: Vec<(f64, f64, f64, f64)>,
 
 // compute the number of different cells at neighbors
 #[pyfunction]
-pub fn neighbor_components<'py>(py: Python<'py>, neighbors: Vec<Vec<usize>>, labels: Vec<usize>, types: Vec<&'py str>)
-                           -> (Vec<&'py str>, Vec<Vec<usize>>) {
+pub fn neighbor_components(neighbors: Vec<Vec<usize>>, labels: Vec<usize>, types: Vec<&str>)
+                           -> (Vec<&str>, Vec<Vec<usize>>) {
     let mut uni_types: HashMap<&str, i64> = HashMap::new();
     let mut types_mapper: HashMap<usize, &str> = HashMap::new();
     for (i, t) in labels.iter().zip(types.iter()) {

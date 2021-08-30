@@ -1,7 +1,4 @@
 use num_traits::FromPrimitive;
-use ndarray::prelude::*;
-use itertools::Itertools;
-use std::collections::HashMap;
 
 pub fn floordiv<T>(a: T, b: T) -> T
     where

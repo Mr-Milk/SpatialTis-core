@@ -175,7 +175,7 @@ fn normalized_pairs_counts(pairs_counts: Array1<f64>) -> Array1<f64> {
 mod tests {
     use ndarray::prelude::*;
 
-    use crate::entropy::{dist_cutoff_mask_arr, euclidean_distance, pdist_2d, leibovici_entropy, altieri_entropy};
+    use crate::entropy::{altieri_entropy, dist_cutoff_mask_arr, euclidean_distance, leibovici_entropy, pdist_2d};
 
     #[test]
     fn test_euclidean_dist() {
