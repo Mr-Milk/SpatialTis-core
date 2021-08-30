@@ -47,13 +47,12 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_material'
+html_theme = "sphinx_book_theme"
 html_theme_options = {
-    'theme_color': '#3fb0ca',
-    'color_primary': 'teal',
-    'nav_title': 'spatialtis_core',
-    'repo_name': 'spatialtis_core',
-    'repo_url': 'https://github.com/Mr-Milk/spatialtis-core',
+    "use_repository_button": True,
+    "use_issues_button": True,
+    "use_edit_page_button": True,
+    "repository_url": 'https://github.com/Mr-Milk/spatialtis-core',
 }
 
 
@@ -65,6 +64,7 @@ html_favicon = '_static/Logo.svg'
 html_logo = '_static/Logo.svg'
 
 # config autoapi
+autoapi_options = ['members', 'imported-members']
 autoapi_dirs = ['../spatialtis_core']
 autoapi_file_patterns = ['*.pyi']
 autoapi_member_order = "groupwise"
