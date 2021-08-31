@@ -1,8 +1,10 @@
-import torch
-import pytorch_lightning as pl
-
 import logging
+
+import pytorch_lightning as pl
+import torch
+
 from .model import GCNG
+
 logging.getLogger("lightning").setLevel(0)
 
 

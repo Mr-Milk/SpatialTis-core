@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::geo::points2bbox;
-use crate::stat::floordiv;
 
 pub struct QuadStats {
     pub(crate) nx: usize,
@@ -24,24 +23,34 @@ impl QuadStats {
                        quad: Option<(usize, usize)>,
                        rect_side: Option<(f64, f64)>,
     ) -> HashMap<usize, usize> {
+        let points_bbox = points2bbox(points.to_owned());
         let bbox = match bbox {
-            Some(data) => data,
-            _ => points2bbox(points.to_owned())
+            Some(data) => {
+                if (data.0 <= points_bbox.0) &
+                    (data.1 <= points_bbox.1) &
+                    (data.2 >= points_bbox.2) &
+                    (data.3 >= points_bbox.3) {
+                    data
+                } else {
+                    panic!("Provided bbox failed to cover all the points!")
+                }
+            }
+            _ => points_bbox
         }; // if bbox is not provide, calculate it for user
 
         let width = bbox.2 - bbox.0;
         let height = bbox.3 - bbox.1;
 
-        match quad {
+        match quad { // match to quad first
             Some(data) => {
                 self.nx = data.0;
                 self.ny = data.1;
             }
-            _ => {
+            _ => { // if quad is None, match rect_side
                 match rect_side {
                     Some(rect) => {
-                        let nx = floordiv(width, rect.0) as usize;
-                        let ny = floordiv(height, rect.1) as usize;
+                        let nx = (width / rect.0).floor() as usize;
+                        let ny = (height / rect.1).floor() as usize;
                         if (nx == 0) | (ny == 0) {
                             panic!("The side of the rect is bigger than the bbox")
                         } else {
@@ -49,7 +58,10 @@ impl QuadStats {
                             self.ny = ny;
                         }
                     }
-                    _ => {}
+                    _ => { // if both quad and rect_side is failed, set quad to (10, 10)
+                        self.nx = 10;
+                        self.ny = 10;
+                    }
                 }
             }
         }
@@ -73,9 +85,8 @@ impl QuadStats {
         let mut dict_id_count: HashMap<usize, usize> = dict_id.iter().map(|i| (*i, 0)).collect();
 
         for point in points {
-            let mut index_x = floordiv((point.0 - bbox.0) as usize, wx as usize);
-            let mut index_y = floordiv((point.1 - bbox.1) as usize, hy as usize);
-
+            let mut index_x = ((point.0 - bbox.0) / wx).floor() as usize;
+            let mut index_y = ((point.1 - bbox.1) / hy).floor() as usize;
             if index_x == self.nx { index_x -= 1 };
             if index_y == self.ny { index_y -= 1 };
             let id_ = index_y * self.nx + index_x;

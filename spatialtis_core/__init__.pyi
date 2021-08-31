@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Optional, Union
+from typing import List, Tuple, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -47,6 +47,7 @@ def polygons_area(points: Points) -> float:
 
     """
     ...
+
 
 def multipolygons_area(points_collections: List[Points]) -> List[float]:
     """Calculate the area of polygons using shoelace formula
@@ -257,7 +258,8 @@ def getis_ord(points: Points,
 
 
 def comb_bootstrap(exp_matrix: np.ndarray, markers: List[str], neighbors: Neighbors, labels: Labels,
-                   pval: float = 0.05, order: bool = False, times: int = 1000, ignore_self: bool = False) -> List[Tuple[str, str, float]]:
+                   pval: float = 0.05, order: bool = False, times: int = 1000, ignore_self: bool = False) -> List[
+    Tuple[str, str, float]]:
     """
     Bootstrap between two types
 
@@ -309,7 +311,7 @@ class CellCombs:
             ignore_self: Whether to consider self as a neighbor
 
         Return:
-            List of tuples, eg.(('a', 'b'), 1.0), the type a and type b has a relationship as association
+            List of tuples, eg.('a', 'b', 1.0), the type a and type b has a relationship as association
 
         """
         ...

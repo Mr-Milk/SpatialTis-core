@@ -1,8 +1,8 @@
 import torch
 import torch.nn.functional as F
+from pytorch_lightning.core.lightning import LightningModule
 from torch.nn import Linear, Flatten
 from torch_geometric.nn import GCNConv, global_max_pool
-from pytorch_lightning.core.lightning import LightningModule
 
 
 class GCNG(LightningModule):
@@ -51,5 +51,3 @@ class GCNG(LightningModule):
         self.test_data_len += len(data.y)
         self.acc = self.correct / self.test_data_len
         return self.acc
-
-

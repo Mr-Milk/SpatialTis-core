@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use delaunator::{Point, triangulate};
 use kiddo::distance::squared_euclidean;
 use kiddo::KdTree;
@@ -30,21 +32,18 @@ pub fn points_neighbors_triangulation(points: Vec<(f64, f64)>, labels: Vec<usize
 {
     let points: Vec<Point> = points.into_iter().map(|p| Point { x: p.0, y: p.1 }).collect();
     let result = triangulate(&points).unwrap().triangles;
-    let mut neighbors: Vec<Vec<usize>> = (0..labels.len()).into_iter().map(|_| vec![]).collect();
+    let mut neighbors: Vec<HashSet<usize>> = (0..labels.len()).into_iter().map(|_| HashSet::new()).collect();
 
-    for i in 0..(result.len() / 3 as usize) {
-        let i = i * 3;
+    (0..result.len()).into_iter().step_by(3).for_each(|i| {
         let slice = vec![result[i], result[i + 1], result[i + 2]];
-        for x in &slice {
-            for y in &slice {
-                if neighbors[*x].iter().any(|i| i != y) {
-                    neighbors[*x].push(labels[*y])
-                }
+        for p1 in &slice {
+            for p2 in &slice {
+                neighbors[*p1].insert(*p2);
             }
         }
-    };
+    });
 
-    neighbors
+    neighbors.into_iter().map(|n| n.into_iter().collect()).collect()
 }
 
 
@@ -80,10 +79,10 @@ fn points_neighbors_knn_within(tree: &KdTree<f64, usize, 2>, point: &(f64, f64),
 
 
 pub fn bbox_neighbors_rtree(bbox: Vec<BBox>, expand: f64, scale: f64) -> Vec<Vec<usize>> {
-    let enlarge_bbox: Vec<AABB<[f64; 2]>> = if expand < 0.0 {
-        expand_bbox(&bbox, expand)
-    } else {
+    let enlarge_bbox: Vec<AABB<[f64; 2]>> = if expand <= 0.0 {
         scale_bbox(&bbox, scale)
+    } else {
+        expand_bbox(&bbox, expand)
     };
     let tree: RTree<BBox> = RTree::<BBox>::bulk_load(bbox);
     enlarge_bbox
@@ -138,10 +137,11 @@ pub fn init_bbox(bbox: Vec<(f64, f64, f64, f64)>, labels: Vec<usize>) -> Vec<BBo
 fn expand_bbox(bbox: &Vec<BBox>, expand: f64) -> Vec<AABB<[f64; 2]>> {
     bbox.iter()
         .map(|b| {
-            BBox::new((b.minx - expand,
-                       b.miny - expand,
-                       b.maxx + expand,
-                       b.maxy + expand), b.label).envelope()
+            let ebox = (b.minx - expand,
+                        b.miny - expand,
+                        b.maxx + expand,
+                        b.maxy + expand);
+            BBox::new(ebox, b.label).envelope()
         }).collect()
 }
 

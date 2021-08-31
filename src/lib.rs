@@ -73,7 +73,7 @@ fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
 
 #[pyfunction]
 pub fn multipoints_bbox(points_collections: Vec<Vec<(f64, f64)>>)
-                   -> Vec<(f64, f64, f64, f64)> {
+                        -> Vec<(f64, f64, f64, f64)> {
     points_collections.into_iter()
         .map(|p| points2bbox(p))
         .collect()
@@ -81,7 +81,7 @@ pub fn multipoints_bbox(points_collections: Vec<Vec<(f64, f64)>>)
 
 #[pyfunction]
 pub fn points_bbox(points: Vec<(f64, f64)>)
-                         -> (f64, f64, f64, f64) {
+                   -> (f64, f64, f64, f64) {
     points2bbox(points)
 }
 
@@ -125,7 +125,7 @@ pub fn points_neighbors(points: Vec<(f64, f64)>,
         Some("kdtree") => "kdtree",
         Some("delaunay") => "delaunay",
         _ => {
-            k = 5;
+            if k == 0 { k = 5 };
             "kdtree"
         } // default will search for knn = 5
     };
@@ -260,13 +260,13 @@ fn xy_comb(x_status: &Vec<bool>, y_status: &Vec<bool>, neighbors: &Vec<Vec<usize
         })
         .collect();
 
-        let m = mean(&perm_counts);
-        let sd = std_dev(&perm_counts);
-        if sd != 0.0 {
-            let z = (real - m) / sd;
-            let pvalue = zscore2pvalue(z, false);
-            if pvalue < pval { z.signum() } else { 0.0 }
-        } else { 0.0 }
+    let m = mean(&perm_counts);
+    let sd = std_dev(&perm_counts);
+    if sd != 0.0 {
+        let z = (real - m) / sd;
+        let pvalue = zscore2pvalue(z, false);
+        if pvalue < pval { z.signum() } else { 0.0 }
+    } else { 0.0 }
 }
 
 

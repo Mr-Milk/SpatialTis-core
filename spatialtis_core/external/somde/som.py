@@ -80,4 +80,3 @@ class SomNode:
         result.sort_values('LLR', inplace=True, ascending=False)
         number_q = result[result.qval < 0.05].shape[0]
         return result, number_q
-

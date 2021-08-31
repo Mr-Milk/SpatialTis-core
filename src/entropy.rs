@@ -167,7 +167,6 @@ fn normalized_pairs_counts(pairs_counts: Array1<f64>) -> Array1<f64> {
     }
 
     Array::from_vec(arr)
-
 }
 
 
@@ -195,16 +194,16 @@ mod tests {
     #[test]
     fn test_leibovici() {
         let points = vec![(1.0, 0.0), (3.0, 0.0), (1.0, 6.0), (3.0, 11.0)];
-        let types = vec![1,2,1,1];
-        let e = leibovici_entropy(points, types, 2.0, false);
-        println!("leibovici entropy is {:?}", e);
+        let types = vec![1, 2, 1, 1];
+        let _e = leibovici_entropy(points, types, 2.0, false);
+        // println!("leibovici entropy is {:?}", e);
     }
 
     #[test]
     fn test_altieri() {
         let points = vec![(1.0, 0.0), (3.0, 0.0), (1.0, 6.0), (3.0, 11.0)];
-        let types = vec![1,2,1,1];
-        let e = altieri_entropy(points, types, 2, false);
-        println!("altieri entropy is {:?}", e);
+        let types = vec![1, 2, 1, 1];
+        let _e = altieri_entropy(points, types, 2, false);
+        // println!("altieri entropy is {:?}", e);
     }
 }
