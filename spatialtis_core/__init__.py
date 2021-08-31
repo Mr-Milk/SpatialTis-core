@@ -8,7 +8,7 @@ from .spatialtis_core import (
     multipoints_bbox,
     polygons_area,
     multipolygons_area,
-    points2shapes,
+    points_shapes,
     points_neighbors,
     bbox_neighbors,
     neighbor_components,
