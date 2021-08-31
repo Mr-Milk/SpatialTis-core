@@ -1,5 +1,9 @@
 # spatialtis-core
 
+[![Documentation Status](https://img.shields.io/readthedocs/spatialtis-core?logo=readthedocs&logoColor=white&style=flat-square)](https://spatialtis-core.readthedocs.io/en/latest?badge=latest)
+![Build&Test](https://img.shields.io/github/workflow/status/Mr-Milk/spatialtis-core/Build?style=flat-square&logo=github)
+
+
 This repo implement some computation intense steps in SpatialTis
 for a better performance.
 
