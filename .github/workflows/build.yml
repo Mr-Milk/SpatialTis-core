@@ -16,8 +16,11 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install numpy pandas scipy torch torch-geometric pytorch-lightning
-      - run: pip install somoclu
+      - name: Install dependencies
+        run: |
+          pip install numpy pandas scipy torch torch-geometric pytorch-lightning
+          pip install somoclu
+          pip install patsy
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -33,6 +36,10 @@ jobs:
       - name: Install built wheel - x86_64
         run: |
           pip install spatialtis_core --no-index --find-links dist
+      - name: Test python API
+        run: |
+          pip install pytest
+          pytest tests/
       - name: Upload wheels
         uses: actions/upload-artifact@v2
         with:
@@ -53,8 +60,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.platform.python-architecture }}
-      - run: pip install numpy pandas scipy torch torch-geometric pytorch-lightning
-      - run: pip install somoclu
+      - name: Install dependencies
+        run: |
+          pip install numpy pandas scipy torch torch-geometric pytorch-lightning
+          pip install somoclu
+          pip install patsy
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -70,6 +80,10 @@ jobs:
       - name: Install built wheel
         run: |
           pip install spatialtis_core --no-index --find-links dist
+      - name: Test python API
+        run: |
+          pip install pytest
+          pytest tests/
       - name: Upload wheels
         uses: actions/upload-artifact@v2
         with:
@@ -88,8 +102,11 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install numpy pandas scipy torch torch-geometric pytorch-lightning
-      - run: pip install somoclu
+      - name: Install dependencies
+        run: |
+          pip install numpy pandas scipy torch torch-geometric pytorch-lightning
+          pip install somoclu
+          pip install patsy
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -106,6 +123,10 @@ jobs:
       - name: Install built wheel
         run: |
           pip install spatialtis_core --no-index --find-links dist
+      - name: Test python API
+        run: |
+          pip install pytest
+          pytest tests/
       - name: Upload wheels
         uses: actions/upload-artifact@v2
         with:
