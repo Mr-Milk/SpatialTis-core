@@ -24,7 +24,6 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
           target: aarch64-apple-darwin
           profile: minimal
           default: true
@@ -68,7 +67,6 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
           target: ${{ matrix.platform.target }}
           profile: minimal
           default: true
@@ -110,7 +108,6 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
           profile: minimal
           default: true
       - name: Build Wheels
