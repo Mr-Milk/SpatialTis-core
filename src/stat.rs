@@ -1,5 +1,3 @@
-use num_traits::FromPrimitive;
-
 // Source code modified from simple_ml crate
 
 pub fn mean<T>(list: &Vec<T>) -> f64
@@ -195,15 +193,4 @@ pub fn correlation<T>(list1: &Vec<T>, list2: &Vec<T>, name: &str) -> f64
         _ => panic!("Either `p`: Pearson or `s`:Spearman has to be the name. Please retry!"),
     };
     output
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::stat::floordiv;
-
-    #[test]
-    fn test_floordiv() {
-        assert_eq!(floordiv(10, 3), 3);
-        assert_eq!(floordiv(10.0, 3.0), 3.0);
-    }
 }

@@ -33,6 +33,7 @@ mod spatial_autocorr;
 mod distribution_index;
 mod hotspot;
 mod entropy;
+mod io;
 
 #[pymodule]
 fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -42,6 +43,13 @@ fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(polygons_area))?;
     m.add_wrapped(wrap_pyfunction!(multipolygons_area))?;
     m.add_wrapped(wrap_pyfunction!(points_shapes))?;
+
+    // geometry io
+    m.add_wrapped(wrap_pyfunction!(dumps_wkt_points))?;
+    m.add_wrapped(wrap_pyfunction!(dumps_wkt_polygons))?;
+    m.add_wrapped(wrap_pyfunction!(reads_wkt_points))?;
+    m.add_wrapped(wrap_pyfunction!(reads_wkt_polygons))?;
+
 
     // corr & neighbor depdent markers
     m.add_wrapped(wrap_pyfunction!(fast_corr))?;
@@ -109,6 +117,25 @@ pub fn points_shapes(p: Vec<(f64, f64)>, method: Option<&str>, concavity: Option
     }
 }
 
+#[pyfunction]
+pub fn dumps_wkt_points(points: Vec<(f64, f64)>) -> Vec<String> {
+    io::points_wkt(points)
+}
+
+#[pyfunction]
+pub fn dumps_wkt_polygons(polygons: Vec<Vec<(f64, f64)>>) -> Vec<String> {
+    io::polygons_wkt(polygons)
+}
+
+#[pyfunction]
+pub fn reads_wkt_points(wkt_strings: Vec<&str>) -> Vec<(f64, f64)> {
+    io::wkt_points(wkt_strings)
+}
+
+#[pyfunction]
+pub fn reads_wkt_polygons(wkt_strings: Vec<&str>) -> Vec<Vec<(f64, f64)>> {
+    io::wkt_polygons(wkt_strings)
+}
 
 #[pyfunction]
 pub fn points_neighbors(points: Vec<(f64, f64)>,
