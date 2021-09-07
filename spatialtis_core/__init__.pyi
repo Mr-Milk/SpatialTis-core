@@ -77,6 +77,57 @@ def points_shapes(p: Points, method: str = "convex", concavity: float = 1.5) -> 
     ...
 
 
+def dumps_wkt_points(points: Points) -> List[str]:
+    """Dumps points into wkt format
+
+    Args:
+        points: A list of 2D points
+
+    Returns:
+        A list of wkt string
+
+    """
+    ...
+
+
+def dumps_wkt_polygons(polygons: List[Points]) -> List[str]:
+    """Dumps points into wkt format
+
+    Args:
+        polygons: A list of polygons
+
+    Returns:
+        A list of wkt string
+
+    """
+    ...
+
+
+def reads_wkt_points(wkt_strings: List[str]) -> Points:
+    """Reads wkt points into python object
+
+    Args:
+        wkt_strings: A list of wkt string represents points
+
+    Returns:
+        A list of 2D points
+
+    """
+    ...
+
+def reads_wkt_polygons(wkt_strings: List[str]) -> List[Points]:
+    """Reads wkt points into python object
+
+    Args:
+        wkt_strings: A list of wkt string represents polygons
+
+    Returns:
+        A list of 2D polygons
+
+    """
+    ...
+
+
 def points_neighbors(points: Points,
                      labels: Optional[Labels] = None,
                      r: Optional[float] = None,
