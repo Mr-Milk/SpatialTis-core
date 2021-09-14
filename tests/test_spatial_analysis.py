@@ -3,7 +3,7 @@ from collections import Counter
 import numpy as np
 from scipy.stats import entropy
 
-from spatialtis_core import spatial_autocorr, spatial_distribution_pattern, spatial_entropy, points_neighbors
+from spatialtis_core import spatial_autocorr, spatial_distribution_pattern, spatial_entropy, points_neighbors, getis_ord
 
 points = [(x, y) for x, y in np.random.randn(100, 2)]
 labels = [i for i in range(len(points))]
@@ -40,3 +40,7 @@ def test_spatial_entropy():
     assert e1[0] > e
     assert e2[0] > e
 
+
+def test_hotspot():
+    getis_ord(points, (-3.0, -3.0, 3.0, 3.0))
+    getis_ord([], (-3.0, -3.0, 3.0, 3.0))
