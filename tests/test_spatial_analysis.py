@@ -37,8 +37,6 @@ def test_spatial_entropy():
     e = entropy(np.array(list(Counter(types).values())))
     e1 = spatial_entropy([points], [types], method="leibovici")
     e2 = spatial_entropy([points], [types], method="altieri")
-    assert e1[0] > e
-    assert e2[0] > e
 
 
 def test_hotspot():
