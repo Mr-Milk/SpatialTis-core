@@ -110,12 +110,12 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
+          toolchain: nightly-2021-08-30
           profile: minimal
           default: true
       - name: Build Wheels
         uses: messense/maturin-action@v1
         with:
-          toolchain: nightly-2021-08-30
           target: ${{ matrix.target }}
           manylinux: auto
           rust-toolchain: nightly
