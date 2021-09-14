@@ -6,13 +6,13 @@ from .util import *
 
 def Sparun(X, exp_tab, kernel_space=None):
     # Perform SpatialDE test
-    if kernel_space == None:
+    if kernel_space is None:
         l_min, l_max = get_l_limits(X)
         kernel_space = {
             'SE': np.logspace(np.log10(l_min), np.log10(l_max), 10),
             'const': 0
         }
-
+    print("check exp_tab before run dyn_de", type(exp_tab))
     results = dyn_de(X, exp_tab, kernel_space)
     mll_results = get_mll_results(results)
 
@@ -69,6 +69,10 @@ class SomNode:
         if self.ninfo is None:
             raise ValueError('please generate mtx first')
         dfm = stabilize(self.ndf)
+        # add by Milk
+        # make sure no NaN or inf in the array
+        # https://stackoverflow.com/questions/68087456/
+        dfm = pd.DataFrame(data=np.nan_to_num(dfm.to_numpy()), columns=dfm.columns, index=dfm.index)
         self.nres = regress_out(self.ninfo, dfm, 'np.log(total_count)').T
         return self.nres
 

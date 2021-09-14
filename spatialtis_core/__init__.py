@@ -3,28 +3,15 @@ from typing import List
 from scipy.sparse import csr_matrix
 
 from .spatial_de import somde
-from .spatialtis_core import (
-    points_bbox,
-    multipoints_bbox,
-    polygons_area,
-    multipolygons_area,
-    points_shapes,
-    dumps_wkt_points,
-    dumps_wkt_polygons,
-    reads_wkt_points,
-    reads_wkt_polygons,
-    points_neighbors,
-    bbox_neighbors,
-    neighbor_components,
-    spatial_autocorr,
-    spatial_entropy,
-    spatial_distribution_pattern,
-    build_neighbors_matrix,
-    getis_ord,
-    comb_bootstrap,
-    CellCombs,
-    fast_corr,
-)
+from .spatialtis_core import (CellCombs, bbox_neighbors,
+                              build_neighbors_matrix, comb_bootstrap,
+                              dumps_wkt_points, dumps_wkt_polygons, fast_corr,
+                              getis_ord, multipoints_bbox, multipolygons_area,
+                              neighbor_components, points_bbox,
+                              points_neighbors, points_shapes, polygons_area,
+                              reads_wkt_points, reads_wkt_polygons,
+                              spatial_autocorr, spatial_distribution_pattern,
+                              spatial_entropy)
 
 
 def spatial_weight(neighbors: List[List[int]], labels: List[int]) -> csr_matrix:

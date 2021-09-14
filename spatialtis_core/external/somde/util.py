@@ -5,8 +5,7 @@ import numpy as np
 import pandas as pd
 import patsy
 import scipy as sp
-from scipy import interpolate
-from scipy import optimize
+from scipy import interpolate, optimize
 from scipy.misc import derivative
 
 
@@ -318,7 +317,10 @@ def const_fits(exp_tab):
         max_mu_hat = y.mean()
         max_s2_e_hat = y.var()
         sum1 = np.square(y - max_mu_hat).sum()
-        max_ll = -0.5 * (n * np.log(max_s2_e_hat) + sum1 / max_s2_e_hat + n * np.log(2 * np.pi))
+        if max_s2_e_hat == 0:
+            max_ll = -0.5 * (n * np.log(2 * np.pi))
+        else:
+            max_ll = -0.5 * (n * np.log(max_s2_e_hat) + sum1 / max_s2_e_hat + n * np.log(2 * np.pi))
 
         results.append({
             'g': exp_tab.columns[g],
