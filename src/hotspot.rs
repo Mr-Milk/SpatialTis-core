@@ -15,6 +15,7 @@ pub fn hotspot(points: Vec<(f64, f64)>,
                pval: f64,
                min_cells: usize, ) -> Vec<bool> {
     let n = points.len();
+    if n == 0 { return vec![] };
     let mut q = QuadStats::new();
     let counts = q.grid_counts(points, Option::from(bbox), quad, rect_side);
     let nx = q.nx;

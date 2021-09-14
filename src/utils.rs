@@ -24,7 +24,6 @@ pub fn count_neighbors<'a>(
         .iter()
         .map(|comb| (comb.to_owned(), vec![]))
         .collect::<HashMap<(&str, &str), Vec<usize>>>();
-
     for (k, v) in neighbors.iter().enumerate() {
         let cent_type = types[k];
         let neigh_type: Counter<_> = { v.iter().map(|i| types[*i]).collect::<Counter<_>>() };
@@ -48,7 +47,6 @@ pub fn count_neighbors<'a>(
     for (k, v) in storage.iter() {
         results.insert(k.to_owned(), mean(&v));
     }
-
     results
 }
 

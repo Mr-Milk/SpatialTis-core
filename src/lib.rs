@@ -276,17 +276,16 @@ pub fn comb_bootstrap(
 
 fn xy_comb(x_status: &Vec<bool>, y_status: &Vec<bool>, neighbors: &Vec<Vec<usize>>, times: usize, pval: f64) -> f64 {
     let real: f64 = comb_count_neighbors(x_status, y_status, &neighbors) as f64;
-    let perm_counts: Vec<usize> = (0..times)
+    let perm_counts: Vec<i32> = (0..times)
         .into_par_iter()
         .map(|_| {
             let mut rng = thread_rng();
             let mut shuffle_y = y_status.to_owned();
             shuffle_y.shuffle(&mut rng);
             let perm_result = comb_count_neighbors(x_status, &shuffle_y, &neighbors);
-            perm_result
+            perm_result as i32
         })
         .collect();
-
     let m = mean(&perm_counts);
     let sd = std_dev(&perm_counts);
     if sd != 0.0 {
@@ -331,14 +330,14 @@ impl CellCombs {
 
         let order = py_kwarg(order, false);
         let uni: Vec<&str> = types_data.into_iter().unique().collect();
-        let mut combs: Vec<Vec<&str>> = if order {
-            uni.to_owned().into_iter().permutations(2).collect()
+        let mut combs: Vec<(&str, &str)> = if order {
+            uni.to_owned().into_iter().permutations(2).map(|i| (i[0], i[1])).collect()
         } else {
-            uni.to_owned().into_iter().combinations(2).collect()
+            uni.to_owned().into_iter().combinations(2).map(|i| (i[0], i[1])).collect()
         };
         // Add self-self relationship
         for i in &uni {
-            combs.push(vec![*i, *i])
+            combs.push((*i, *i))
         };
 
         Ok(CellCombs {

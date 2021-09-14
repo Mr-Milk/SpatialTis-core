@@ -14,6 +14,7 @@ pub fn mean<T>(list: &Vec<T>) -> f64
         <T as std::str::FromStr>::Err: std::fmt::Debug,
 {
     // https://machinelearningmastery.com/implement-simple-linear-regression-scratch-python/
+    if list.len() == 0 { return 0.0 };
     let zero: T = "0".parse().unwrap();
     let len_str = list.len().to_string();
     let length: T = len_str.parse().unwrap();
@@ -38,6 +39,7 @@ pub fn std_dev<T>(list1: &Vec<T>) -> f64
         + std::str::FromStr,
         <T as std::str::FromStr>::Err: std::fmt::Debug,
 {
+    if list1.len() == 0 { return 0.0 };
     let mu: T = mean(list1).to_string().parse().unwrap();
     let square_of_difference = list1.iter().map(|a| (*a - mu) * (*a - mu)).collect();
     let var = mean(&square_of_difference);

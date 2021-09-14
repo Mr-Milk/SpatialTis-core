@@ -32,7 +32,8 @@ impl QuadStats {
                     (data.3 >= points_bbox.3) {
                     data
                 } else {
-                    panic!("Provided bbox failed to cover all the points!")
+                    println!("Provided bbox failed to cover all the points! Use the minimum bounding box");
+                    points_bbox
                 }
             }
             _ => points_bbox
