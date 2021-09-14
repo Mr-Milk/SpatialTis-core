@@ -75,7 +75,6 @@ jobs:
       - name: Build wheels
         uses: messense/maturin-action@v1
         with:
-          rust-toolchain: nightly-2021-08-30
           target: ${{ matrix.platform.target }}
           args: -i python --release --out dist --no-sdist
       - name: Install built wheel
@@ -117,6 +116,7 @@ jobs:
       - name: Build Wheels
         uses: messense/maturin-action@v1
         with:
+          rust-toolchain: nightly-2021-08-30
           target: ${{ matrix.target }}
           manylinux: auto
           args: -i python${{ matrix.python-version }} --release --out dist --no-sdist
