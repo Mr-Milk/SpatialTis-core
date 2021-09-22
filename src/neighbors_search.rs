@@ -60,7 +60,7 @@ pub fn kdtree_builder(points: &Vec<(f64, f64)>, labels: &Vec<usize>) -> KdTree<f
 
 fn points_neighbors_within(tree: &KdTree<f64, usize, 2>, point: &(f64, f64), r: f64)
                            -> Vec<usize> {
-    let within = tree.within_unsorted(&[point.0, point.1], r, &squared_euclidean).unwrap();
+    let within = tree.within_unsorted(&[point.0, point.1], r*r, &squared_euclidean).unwrap();
     within.iter().map(|(_, i)| { **i }).collect()
 }
 
@@ -74,7 +74,7 @@ fn points_neighbors_knn(tree: &KdTree<f64, usize, 2>, point: &(f64, f64), k: usi
 
 fn points_neighbors_knn_within(tree: &KdTree<f64, usize, 2>, point: &(f64, f64), r: f64, k: usize)
                                -> Vec<usize> {
-    tree.best_n_within(&[point.0, point.1], r, k, &squared_euclidean).unwrap()
+    tree.best_n_within(&[point.0, point.1], r*r, k, &squared_euclidean).unwrap()
 }
 
 
