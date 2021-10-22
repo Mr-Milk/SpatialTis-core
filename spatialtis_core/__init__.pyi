@@ -180,7 +180,9 @@ def bbox_neighbors(bbox: List[BoundingBox],
     ...
 
 
-def neighbor_components(neighbors: Neighbors, labels: Labels, types: List[str],
+def neighbor_components(neighbors: Neighbors,
+                        labels: Labels,
+                        types: List[str],
                         ) -> (List[str], List[List[int]]):
     """Compute the number of different cells at neighbors
 
@@ -206,7 +208,8 @@ def spatial_autocorr(x: np.ndarray,
                      labels: Labels,
                      two_tailed: bool = True,
                      pval: float = 0.05,
-                     method: str = "moran_i") -> List[Tuple[float, float]]:
+                     method: str = "moran_i",
+                     ) -> List[Tuple[float, float]]:
     """Compute spatial auto-correlation value for a 2D array in parallel
 
     The p-value is under the assumption of normal distribution
@@ -308,9 +311,33 @@ def getis_ord(points: Points,
     ...
 
 
-def comb_bootstrap(exp_matrix: np.ndarray, markers: List[str], neighbors: Neighbors, labels: Labels,
-                   pval: float = 0.05, order: bool = False, times: int = 1000, ignore_self: bool = False) -> List[
-    Tuple[str, str, float]]:
+def fast_corr(data1: np.ndarray,
+              data2: np.ndarray,
+              method: Optional[str] = "pearson",
+              ) -> np.ndarray:
+    """Parallel pairwise correlation
+
+    Compute pairwise (combination with replacement) correlation between
+    two 2D array with same shape. Faster than scipy's implementation.
+
+    Args:
+        data1: 2D Array
+        data2: 2D Array
+        method: "pearson" or "spearman"
+
+    """
+    ...
+
+
+def comb_bootstrap(exp_matrix: np.ndarray,
+                   markers: List[str],
+                   neighbors: Neighbors,
+                   labels: Labels,
+                   pval: float = 0.05,
+                   order: bool = False,
+                   times: int = 1000,
+                   ignore_self: bool = False,
+                   ) -> List[Tuple[str, str, float]]:
     """
     Bootstrap between two types
 
@@ -345,8 +372,15 @@ class CellCombs:
 
     def __init__(self, types: List[str], order: bool = False): ...
 
-    def bootstrap(self, types: List[str], neighbors: Neighbors, labels: Labels, times: int = 1000, pval: float = 0.05,
-                  method: str = 'pval', ignore_self: bool = False) -> List[Tuple[str, str, float]]:
+    def bootstrap(self,
+                  types: List[str],
+                  neighbors: Neighbors,
+                  labels: Labels,
+                  times: int = 1000,
+                  pval: float = 0.05,
+                  method: str = 'pval',
+                  ignore_self: bool = False,
+                  ) -> List[Tuple[str, str, float]]:
         """
         Bootstrap functions
 
@@ -376,7 +410,8 @@ def somde(exp: pd.DataFrame,
           alpha: float = 0.5,
           epoch: int = 100,
           pval: float = 0.05,
-          qval: float = 0.05) -> np.ndarray:
+          qval: float = 0.05,
+          ) -> np.ndarray:
     """A wrapper for somde, a method to identify spatial variable genes
 
     `Publications <https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btab471/6308937>`_

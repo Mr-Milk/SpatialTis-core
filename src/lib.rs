@@ -1,9 +1,11 @@
+extern crate blas_src;
+
 use std::collections::HashMap;
 
 use counter::Counter;
 use itertools::Itertools;
 use ndarray::prelude::*;
-use numpy::{PyArray1, PyReadonlyArray2, ToPyArray};
+use numpy::{PyArray1, PyReadonlyArray2, ToPyArray, IntoPyArray};
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use rand::seq::SliceRandom;
@@ -19,8 +21,11 @@ use crate::neighbors_search::{bbox_neighbors_rtree,
                               points_neighbors_kdtree,
                               points_neighbors_triangulation};
 use crate::spatial_autocorr::{geary_c_parallel, moran_i_parallel, spatial_weights_sparse_matrix};
-use crate::stat::{mean, std_dev};
+use crate::stat::{mean_f, std_f, mean_u, std_u};
 use crate::utils::{comb_count_neighbors, count_neighbors, py_kwarg, remove_rep_neighbors, zscore2pvalue};
+use crate::corr::{pair2_pearson, pair2_spearman};
+
+use crate::utils::{pdist_2d, pdist_2d_par};
 
 mod preprocessing;
 mod utils;
@@ -75,7 +80,20 @@ fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
     // boostrap for cell cell interactions
     m.add_class::<CellCombs>()?;
     m.add_wrapped(wrap_pyfunction!(comb_bootstrap))?;
+
+    // pairwise dist
+    m.add_wrapped(wrap_pyfunction!(pdist))?;
     Ok(())
+}
+
+#[pyfunction]
+pub fn pdist<'py>(py: Python<'py>, points: PyReadonlyArray2<f64>, par: bool) -> &'py PyArray1<f64> {
+    let points = points.as_array();
+    if par {
+        pdist_2d_par(points).into_pyarray(py)
+    } else {
+        pdist_2d(points).into_pyarray(py)
+    }
 }
 
 
@@ -260,6 +278,7 @@ pub fn comb_bootstrap(
     for comb in (0..markers.len()).combinations_with_replacement(2) {
         let x_status = exp_matrix.slice(s![comb[0], ..]).to_vec();
         let y_status = exp_matrix.slice(s![comb[1], ..]).to_vec();
+        println!("{:?} {:?}", markers[comb[0]], markers[comb[1]]);
         let p = xy_comb(&x_status, &y_status, &neighbors, times, pval);
         results.push((markers[comb[0]], markers[comb[1]], p));
         if order {
@@ -276,21 +295,23 @@ pub fn comb_bootstrap(
 
 fn xy_comb(x_status: &Vec<bool>, y_status: &Vec<bool>, neighbors: &Vec<Vec<usize>>, times: usize, pval: f64) -> f64 {
     let real: f64 = comb_count_neighbors(x_status, y_status, &neighbors) as f64;
-    let perm_counts: Vec<i32> = (0..times)
+    let perm_counts: Vec<usize> = (0..times)
         .into_par_iter()
         .map(|_| {
             let mut rng = thread_rng();
             let mut shuffle_y = y_status.to_owned();
             shuffle_y.shuffle(&mut rng);
             let perm_result = comb_count_neighbors(x_status, &shuffle_y, &neighbors);
-            perm_result as i32
+            perm_result
         })
         .collect();
-    let m = mean(&perm_counts);
-    let sd = std_dev(&perm_counts);
+    let m = mean_u(&perm_counts);
+    let sd = std_u(&perm_counts);
+    println!("mean {:?} sd {:?}", m, sd);
     if sd != 0.0 {
         let z = (real - m) / sd;
         let pvalue = zscore2pvalue(z, false);
+        println!("z {:?} pvalue {:?}", z, pvalue);
         if pvalue < pval { z.signum() } else { 0.0 }
     } else { 0.0 }
 }
@@ -431,15 +452,15 @@ impl CellCombs {
                 let gt: f64 = gt / (times.to_owned() as f64 + 1.0);
                 let lt: f64 = lt / (times.to_owned() as f64 + 1.0);
                 let dir: f64 = (gt < lt) as i32 as f64;
-                let udir: f64 = -dir;
+                let udir: f64 = !(gt < lt) as i32 as f64;
                 let p: f64 = gt * dir + lt * udir;
                 let sig: f64 = (p < pval) as i32 as f64;
                 let sigv: f64 = sig * (dir - 0.5).signum();
                 results.push((k.0, k.1, sigv));
                 if !order { results.push((k.1, k.0, sigv)) }
             } else {
-                let m = mean(&v);
-                let sd = std_dev(&v);
+                let m = mean_f(&v);
+                let sd = std_f(&v);
 
                 let sigv = if sd != 0.0 {
                     let z = (real - m) / sd;
@@ -483,16 +504,15 @@ pub fn spatial_autocorr(_py: Python,
 #[pyfunction]
 pub fn fast_corr<'py>(py: Python<'py>, data1: PyReadonlyArray2<f64>, data2: PyReadonlyArray2<f64>, method: Option<&str>)
                       -> &'py PyArray1<f64> {
-    let method: &str = match method {
-        Some("pearson") => "p",
-        Some("spearman") => "s",
-        _ => "s",
+    let data1: ArrayView2<f64> = data1.as_array();
+    let data2: ArrayView2<f64> = data2.as_array();
+
+    let r: Array1<f64> = match method {
+        Some("spearman") => { pair2_spearman(data1, data2) },
+        _ => { pair2_pearson(data1, data2) },
     };
 
-    let data1 = data1.as_array();
-    let data2 = data2.as_array();
-
-    corr::cross_corr(data1, data2, method).to_pyarray(py)
+    r.to_pyarray(py)
 }
 
 

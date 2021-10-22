@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 
 use counter::Counter;
-use itertools::min;
+use itertools::{min, Itertools};
 use statrs::distribution::{ChiSquared, ContinuousCDF, Normal};
 
-use crate::stat::mean;
+use crate::stat::mean_u;
+use rayon::prelude::*;
+use ndarray::prelude::*;
+use ndarray::{ArrayView2, Array, Array1, ArrayView1};
 
 pub fn py_kwarg<T>(arg: Option<T>, default_value: T) -> T {
     match arg {
@@ -45,7 +48,7 @@ pub fn count_neighbors<'a>(
 
     let mut results: HashMap<(&'a str, &'a str), f64> = HashMap::new();
     for (k, v) in storage.iter() {
-        results.insert(k.to_owned(), mean(&v));
+        results.insert(k.to_owned(), mean_u(&v));
     }
     results
 }
@@ -108,4 +111,42 @@ pub fn zscore2pvalue(z: f64, two_tailed: bool) -> f64 {
 pub fn chisquare2pvalue(chi2_value: f64, ddof: f64) -> f64 {
     let chi2_dist: ChiSquared = ChiSquared::new(ddof).unwrap();
     1.0 - chi2_dist.cdf(chi2_value)
+}
+
+
+fn square_euclidean(p1: ArrayView1<f64>, p2: ArrayView1<f64>) -> f64 {
+    let s = p1.to_owned() - p2.to_owned();
+    return s.dot(&s)
+}
+
+
+pub fn pdist_2d_par(x: ArrayView2<f64>) -> Array1<f64>
+// pairwise distance, skip all the self dist
+{
+    let n = x.shape()[0];
+    let combs: Vec<(usize, usize)> = (0..n).combinations(2)
+        .into_iter()
+        .map(|i| (i[0], i[1]))
+        .collect();
+    let r: Vec<f64> = combs.into_par_iter().map(|(c1, c2)| {
+        square_euclidean(x.slice(s![c1, ..]), x.slice(s![c2, ..]))
+    }).collect();
+    Array::from_vec(r)
+}
+
+
+pub fn pdist_2d(x: ArrayView2<f64>) -> Array1<f64>
+// pairwise distance, skip all the self dist
+{
+    let n = x.shape()[0];
+    let mut result = Array::zeros(n * (n - 1) / 2);
+    let mut ptr: usize = 0;
+    for i in 0..(n-1) {
+        for j in (i + 1)..n {
+            let d = square_euclidean(x.slice(s![i, ..]), x.slice(s![j, ..]));
+            result[ptr] = d;
+            ptr += 1;
+        }
+    }
+    result
 }

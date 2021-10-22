@@ -529,6 +529,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56"
 
 [[package]]
+name = "ordered-float"
+version = "2.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97c9d06878b3a851e8026ef94bf7fef9ba93062cd412601da4d9cf369b1cc62d"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -830,7 +839,7 @@ checksum = "fe0f37c9e8f3c5a4a66ad655a93c74daac4ad00c441533bf5c6e7990bb42604e"
 
 [[package]]
 name = "spatialtis_core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "counter",
  "delaunator",
@@ -843,6 +852,7 @@ dependencies = [
  "ndarray-stats",
  "num-traits",
  "numpy",
+ "ordered-float",
  "pyo3",
  "rand",
  "rayon",
