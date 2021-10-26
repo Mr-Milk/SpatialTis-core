@@ -54,3 +54,33 @@ pub fn std_f(numbers: &Vec<f64>) -> f64 {
         0.0
     }
 }
+
+
+#[cfg(test)]
+mod test {
+    use crate::stat::*;
+
+    #[test]
+    fn test_mean_u() {
+        let x: Vec<usize> = vec![1, 2, 3, 4, 5];
+        assert_eq!(mean_u(&x), 3.0)
+    }
+
+    #[test]
+    fn test_mean_f() {
+        let x: Vec<f64> = vec![1., 2., 3., 4., 5.];
+        assert_eq!(mean_f(&x), 3.0)
+    }
+
+    #[test]
+    fn test_std_u() {
+        let x: Vec<usize> = vec![1, 2, 3, 4, 5];
+        assert_eq!(std_u(&x),  std::f64::consts::SQRT_2)
+    }
+
+    #[test]
+    fn test_std_f() {
+        let x: Vec<f64> = vec![1., 2., 3., 4., 5.];
+        assert_eq!(std_f(&x),  std::f64::consts::SQRT_2)
+    }
+}

@@ -12,19 +12,20 @@ def Sparun(X, exp_tab, kernel_space=None):
             'SE': np.logspace(np.log10(l_min), np.log10(l_max), 10),
             'const': 0
         }
-    print("check exp_tab before run dyn_de", type(exp_tab))
     results = dyn_de(X, exp_tab, kernel_space)
     mll_results = get_mll_results(results)
 
     # Perform significance test
-    mll_results['pval'] = 1 - chi2.cdf(mll_results['LLR'], df=1)
-    mll_results['qval'] = qvalue(mll_results['pval'])
-
-    return mll_results
+    if mll_results.shape[0] > 0:
+        mll_results['pval'] = 1 - chi2.cdf(mll_results['LLR'], df=1)
+        mll_results['qval'] = qvalue(mll_results['pval'])
+        return mll_results
+    else:
+        return None
 
 
 class SomNode:
-    def __init__(self, X, k, homogeneous_codebook=True):
+    def __init__(self, X, k, epochs=10, homogeneous_codebook=True):
         self.X = X
         self.somn = int(np.sqrt(X.shape[0] // k))
         self.ndf = None
@@ -38,10 +39,7 @@ class SomNode:
             self.som = somoclu.Somoclu(self.somn, self.somn, initialcodebook=self.inicodebook.copy())
         else:
             self.som = somoclu.Somoclu(self.somn, self.somn)
-        self.som.train(X, epochs=10)
-
-    def reTrain(self, ep):
-        self.som.train(self.X, epochs=ep)
+        self.som.train(X, epochs=10+epochs)
 
     def mtx(self, df, alpha=0.5):
         bsmc = self.som.bmus
@@ -49,7 +47,7 @@ class SomNode:
         for i in np.arange(bsmc.shape[0]):
             u, v = bsmc[i]
             soml.append(v * self.somn + u)
-        ndf_value = np.zeros([df.shape[0], len(np.unique(np.array(soml)))])
+        ndf_value = np.zeros((df.shape[0], len(np.unique(np.array(soml)))))
         ninfo = pd.DataFrame(columns=['x', 'y', 'total_count'])
         tmp = 0
         for i in np.unique(np.array(soml)):
@@ -63,24 +61,29 @@ class SomNode:
         ninfo.total_count = ndf.sum(0)
         self.ndf = ndf
         self.ninfo = ninfo
-        return ndf, ninfo,
 
     def norm(self):
         if self.ninfo is None:
             raise ValueError('please generate mtx first')
-        dfm = stabilize(self.ndf)
-        # add by Milk
-        # make sure no NaN or inf in the array
-        # https://stackoverflow.com/questions/68087456/
-        dfm = pd.DataFrame(data=np.nan_to_num(dfm.to_numpy()), columns=dfm.columns, index=dfm.index)
-        self.nres = regress_out(self.ninfo, dfm, 'np.log(total_count)').T
-        return self.nres
+        if self.ndf.shape[1] == 1:
+            return False
+        else:
+            dfm = stabilize(self.ndf)
+            # add by Milk
+            # make sure no NaN or inf in the array
+            # https://stackoverflow.com/questions/68087456/
+            dfm = pd.DataFrame(data=np.nan_to_num(dfm.to_numpy()), columns=dfm.columns, index=dfm.index)
+            self.nres = regress_out(self.ninfo, dfm, 'np.log(total_count)').T
+            return True
 
     def run(self):
         if self.nres is None:
             self.norm()
         X = self.ninfo[['x', 'y']].values.astype(float)
         result = Sparun(X, self.nres)
-        result.sort_values('LLR', inplace=True, ascending=False)
-        number_q = result[result.qval < 0.05].shape[0]
-        return result, number_q
+        if result is not None:
+            result.sort_values('LLR', inplace=True, ascending=False)
+            number_q = result[result.qval < 0.05].shape[0]
+            return result, number_q
+        else:
+            return None, None

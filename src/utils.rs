@@ -150,3 +150,17 @@ pub fn pdist_2d(x: ArrayView2<f64>) -> Array1<f64>
     }
     result
 }
+
+
+#[cfg(test)]
+mod test {
+    use crate::utils::comb_count_neighbors;
+
+    #[test]
+    fn test_comb_count_neighbors() {
+        let x = vec![true, false, false, true, true];
+        let y = vec![true, false, false, true, true];
+        let neighbors = vec![vec![2, 3], vec![1, 4], vec![0, 1], vec![0, 2], vec![1, 3]];
+        assert_eq!(comb_count_neighbors(&x, &y, &neighbors), 3)
+    }
+}

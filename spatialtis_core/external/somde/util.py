@@ -8,6 +8,8 @@ import scipy as sp
 from scipy import interpolate, optimize
 from scipy.misc import derivative
 
+np.seterr(divide='ignore', invalid='ignore')
+
 
 def qvalue(pv, pi0=None):
     assert (pv.min() >= 0 and pv.max() <= 1), "p-values should be between 0 and 1"
@@ -164,8 +166,7 @@ def LL(delta, UTy, UT1, S, n, Yvar=None):
     sum_1 = (np.square(UTy - UT1 * mu_h) / (S + delta * Yvar)).sum()
     sum_2 = np.log(S + delta * Yvar).sum()
 
-    with np.errstate(divide='ignore'):
-        return -0.5 * (n * np.log(2 * np.pi) + n * np.log(sum_1 / n) + sum_2 + n)
+    return -0.5 * (n * np.log(2 * np.pi) + n * np.log(sum_1 / n) + sum_2 + n)
 
 
 def logdelta_prior_lpdf(log_delta):
@@ -214,7 +215,8 @@ def lbfgsb_max_LL(UTy, UT1, S, n, Yvar=None):
     max_mu_hat = mu_hat(max_delta, UTy, UT1, S, n, Yvar)
     max_s2_t_hat = s2_t_hat(max_delta, UTy, S, n, Yvar)
 
-    s2_logdelta = 1. / (derivative(LL_obj, np.log(max_delta), n=2) ** 2)
+    with np.errstate(divide="ignore"):
+        s2_logdelta = 1. / (derivative(LL_obj, np.log(max_delta), n=2) ** 2)
 
     return max_ll, max_delta, max_mu_hat, max_s2_t_hat, s2_logdelta
 

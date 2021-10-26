@@ -1,5 +1,3 @@
-extern crate blas_src;
-
 use std::collections::HashMap;
 
 use counter::Counter;
@@ -278,7 +276,7 @@ pub fn comb_bootstrap(
     for comb in (0..markers.len()).combinations_with_replacement(2) {
         let x_status = exp_matrix.slice(s![comb[0], ..]).to_vec();
         let y_status = exp_matrix.slice(s![comb[1], ..]).to_vec();
-        println!("{:?} {:?}", markers[comb[0]], markers[comb[1]]);
+        // println!("{:?} {:?}", markers[comb[0]], markers[comb[1]]);
         let p = xy_comb(&x_status, &y_status, &neighbors, times, pval);
         results.push((markers[comb[0]], markers[comb[1]], p));
         if order {
@@ -307,11 +305,11 @@ fn xy_comb(x_status: &Vec<bool>, y_status: &Vec<bool>, neighbors: &Vec<Vec<usize
         .collect();
     let m = mean_u(&perm_counts);
     let sd = std_u(&perm_counts);
-    println!("mean {:?} sd {:?}", m, sd);
+    // println!("mean {:?} sd {:?}", m, sd);
     if sd != 0.0 {
         let z = (real - m) / sd;
         let pvalue = zscore2pvalue(z, false);
-        println!("z {:?} pvalue {:?}", z, pvalue);
+        // println!("z {:?} pvalue {:?}", z, pvalue);
         if pvalue < pval { z.signum() } else { 0.0 }
     } else { 0.0 }
 }

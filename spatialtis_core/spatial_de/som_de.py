@@ -27,10 +27,11 @@ def somde(exp: pd.DataFrame,
     """
     if not isinstance(coord, np.ndarray):
         coord = np.array(coord)
-    som = SomNode(coord, k)
-    som.reTrain(epoch)
-    _ = som.mtx(exp, alpha=alpha)
-    _ = som.norm()
-    result, _ = som.run()
-    sv_genes = result[(result['pval'] < pval) & (result['qval'] < qval)]['g'].to_numpy()
+    som = SomNode(coord, k, epoch)
+    som.mtx(exp, alpha=alpha)
+    sv_genes = np.array([])
+    if som.norm():
+        result, _ = som.run()
+        if result is not None:
+            sv_genes = result[(result['pval'] < pval) & (result['qval'] < qval)]['g'].to_numpy()
     return sv_genes
