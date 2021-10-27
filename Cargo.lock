@@ -123,9 +123,12 @@ dependencies = [
 
 [[package]]
 name = "delaunator"
-version = "0.2.1"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c54f860fe2de6546eeb5fc7f959a6f84a5d86f4593c1871500dd3c98929cefbc"
+checksum = "47e6e733490d07f3b4dec29a7b14d47f18d69ba40422348832b275ebb34c199e"
+dependencies = [
+ "robust",
+]
 
 [[package]]
 name = "either"
