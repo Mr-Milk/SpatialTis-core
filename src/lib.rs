@@ -235,24 +235,6 @@ pub fn build_neighbors_matrix(neighbors: Vec<Vec<usize>>, labels: Vec<usize>)
 }
 
 
-/// comb_bootstrap(x_status, y_status, neighbors, times=500, ignore_self=False)
-/// --
-///
-/// Bootstrap between two types
-///
-/// If you want to test co-localization between protein X and Y, first determine if the cell is X-positive
-/// and/or Y-positive. True is considered as positive and will be counted.
-///
-/// Args:
-///     x_status: List[bool]; If cell is type x
-///     y_status: List[bool]; If cell is type y
-///     neighbors: Dict[int, List[int]]; eg. {1:[4,5], 2:[6,7]}, cell at index 1 has neighbor cells from index 4 and 5
-///     times: int (500); How many times to perform bootstrap
-///     ignore_self: bool (False); Whether to consider self as a neighbor
-///
-/// Return:
-///     The spatial relationship between X and Y
-///
 #[pyfunction]
 pub fn comb_bootstrap(
     py: Python,

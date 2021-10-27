@@ -31,7 +31,7 @@ pub fn points_neighbors_kdtree(points: Vec<(f64, f64)>,
 pub fn points_neighbors_triangulation(points: Vec<(f64, f64)>, labels: Vec<usize>) -> Vec<Vec<usize>>
 {
     let points: Vec<Point> = points.into_iter().map(|p| Point { x: p.0, y: p.1 }).collect();
-    let result = triangulate(&points).unwrap().triangles;
+    let result = triangulate(&points).triangles;
     let mut neighbors: Vec<HashSet<usize>> = (0..labels.len()).into_iter().map(|_| HashSet::new()).collect();
 
     (0..result.len()).into_iter().step_by(3).for_each(|i| {
