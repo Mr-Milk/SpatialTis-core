@@ -12,7 +12,7 @@ from .spatialtis_core import (CellCombs, bbox_neighbors,
                               reads_wkt_points, reads_wkt_polygons,
                               spatial_autocorr, spatial_distribution_pattern,
                               spatial_entropy)
-from .spatialtis_core import pdist
+# from .spatialtis_core import pdist
 
 
 def spatial_weight(neighbors: List[List[int]], labels: List[int]) -> csr_matrix:

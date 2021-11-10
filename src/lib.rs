@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use counter::Counter;
 use itertools::Itertools;
@@ -79,10 +79,9 @@ fn spatialtis_core<'py>(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<CellCombs>()?;
     m.add_wrapped(wrap_pyfunction!(comb_bootstrap))?;
 
-    // pairwise dist
-    m.add_wrapped(wrap_pyfunction!(pdist))?;
     Ok(())
 }
+
 
 #[pyfunction]
 pub fn pdist<'py>(py: Python<'py>, points: PyReadonlyArray2<f64>, par: bool) -> &'py PyArray1<f64> {
