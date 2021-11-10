@@ -18,7 +18,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          pip install numpy pandas scipy torch torch-geometric pytorch-lightning
+          pip install numpy pandas scipy
           pip install somoclu
           pip install patsy
       - name: Install Rust toolchain
@@ -62,7 +62,7 @@ jobs:
           architecture: ${{ matrix.platform.python-architecture }}
       - name: Install dependencies
         run: |
-          pip install numpy pandas scipy torch torch-geometric pytorch-lightning
+          pip install numpy pandas scipy
           pip install somoclu
           pip install patsy
       - name: Install Rust toolchain
@@ -104,7 +104,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          pip install numpy pandas scipy torch torch-geometric pytorch-lightning
+          pip install numpy pandas scipy
           pip install somoclu
           pip install patsy
       - name: Install Rust toolchain
