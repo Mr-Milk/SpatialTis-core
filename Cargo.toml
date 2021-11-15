@@ -1,6 +1,6 @@
 [package]
 name = "spatialtis_core"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Milk <zym.zym1220@gmail.com>"]
 edition = "2018"
 
@@ -16,6 +16,7 @@ classifier = [
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python",
     "Programming Language :: Rust",
 ]
