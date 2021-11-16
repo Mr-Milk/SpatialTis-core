@@ -29,13 +29,13 @@ jobs:
           profile: minimal
           default: true
       - name: Build wheels - x86_64
-        uses: messense/maturin-action@v1
+        uses: messense/maturin-action@setup-python
         with:
           target: x86_64-apple-darwin
-          args: -i python${{ matrix.python-version }} --release --out dist
-      - uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
+          args: -i python --release --out dist
+#      - uses: actions/setup-python@v2
+#        with:
+#          python-version: ${{ matrix.python-version }}
       - name: Install built wheel - x86_64
         run: |
           pip install spatialtis_core --no-index --find-links dist
