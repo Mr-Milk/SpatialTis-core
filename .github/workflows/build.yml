@@ -24,7 +24,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2021-08-30
+          toolchain: stable
           target: aarch64-apple-darwin
           profile: minimal
           default: true
@@ -68,7 +68,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2021-08-30
+          toolchain: stable
           target: ${{ matrix.platform.target }}
           profile: minimal
           default: true
@@ -110,13 +110,13 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2021-08-30
+          toolchain: stable
           profile: minimal
           default: true
       - name: Build Wheels
         uses: messense/maturin-action@v1
         with:
-          rust-toolchain: nightly-2021-08-30
+          rust-toolchain: stable
           target: ${{ matrix.target }}
           manylinux: auto
           args: -i python${{ matrix.python-version }} --release --out dist --no-sdist
