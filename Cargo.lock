@@ -307,9 +307,9 @@ dependencies = [
 
 [[package]]
 name = "kiddo"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "503362be4efe7ff9bb8d99599a6145c39d75fce9fc185cd0bbe0351a9990f69c"
+checksum = "b65ad2193b81d1050ae6570a00c96e6bd1b3ea0e2a3c3831f02cf6891613c329"
 dependencies = [
  "num-traits",
 ]
