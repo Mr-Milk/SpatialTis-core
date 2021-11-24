@@ -35,15 +35,15 @@ jobs:
           args: -i python --release --out dist
       - name: Install built wheel - x86_64
         run: |
-          pip install spatialtis_core --no-index --find-links dist --force-reinstall
+          pip install spatialtis_core --no-index --find-links dist
       - name: Build wheels - universal2
         uses: messense/maturin-action@v1
         with:
           args: -i python --release --out dist
       - name: Install built wheel - universal2
         run: |
-          pip install crfs --no-index --find-links dist --force-reinstall
-          python -c "import crfs"
+          pip uninstall spatialtis_core
+          pip install spatialtis_core --no-index --find-links dist
       - name: Test python API
         run: |
           pip install pytest
