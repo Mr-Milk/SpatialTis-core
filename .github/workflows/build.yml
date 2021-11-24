@@ -39,10 +39,10 @@ jobs:
       - name: Build wheels - universal2
         uses: messense/maturin-action@v1
         with:
-          args: -i python --release --out dist
+          args: -i python --release --out dist --universal2
       - name: Install built wheel - universal2
         run: |
-          pip uninstall spatialtis_core
+          pip uninstall -y spatialtis_core
           pip install spatialtis_core --no-index --find-links dist
       - name: Test python API
         run: |
