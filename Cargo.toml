@@ -32,7 +32,7 @@ delaunator = "1.0.1"
 geo = "0.18.0"
 counter = "0.5.2"
 ordered-float = "2.8.0"
-ndarray = { version = "0.15.3", features =['rayon'] }
+ndarray = { version = "0.15.4", features =['rayon'] }
 ndarray-stats = "0.5.0"
 num-traits = "0.2.14"
 statrs = "0.15.0"
