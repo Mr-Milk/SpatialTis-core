@@ -3,7 +3,6 @@ from time import time
 
 import numpy as np
 import pandas as pd
-import patsy
 import scipy as sp
 from scipy import interpolate, optimize
 from scipy.misc import derivative
@@ -428,6 +427,10 @@ def stabilize(expression_matrix):
 
 
 def regress_out(sample_info, expression_matrix, covariate_formula, design_formula='1', rcond=-1):
+    try:
+        import patsy
+    except ImportError:
+        raise ImportError("Try `pip install patsy`")
     # Ensure intercept is not part of covariates
     covariate_formula += ' - 1'
 
