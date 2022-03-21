@@ -7,14 +7,17 @@
 This repo implement computation intense steps in SpatialTis
 for a better performance.
 
-As of v0.1.2, we could build on stable Rust.
+### Installation
 
 To install the release version
 ```shell
 pip install spatialtis_core
 ```
 
-To install the development version of the package
+To install the development version of the package, make sure you have Rust toolchain installed. The package is built using `maturin`.
+
+> As of v0.1.2, we could build on stable Rust.
+> 
 ```shell
 git clone https://github.com/Mr-Milk/SpatialTis-core.git
 cd SpatialTis-core
@@ -22,6 +25,15 @@ cd SpatialTis-core
 pip install maturin
 maturin develop
 ```
+
+### Wheel built for
+
+|           | py3.7 | py3.8 | py3.9 | py3.10 |
+|-----------|-------|-------|-------|--------|
+| Windows   |  ✔️  |  ✔️   |  ✔️  |   ✔️   |
+| Linux     | ✔️  |  ✔️   |  ✔️  |   ✔️   |
+| MacOS     |   ✔️  |  ✔️   |  ✔️  |   ✔️   |
+| MacOS-ARM |   ✔️  |  ✔️   |  ✔️  |   ✔️   |
 
 
 
