@@ -1,4 +1,3 @@
-import somoclu
 from scipy.stats import chi2
 
 from .util import *
@@ -31,6 +30,11 @@ class SomNode:
         self.ndf = None
         self.ninfo = None
         self.nres = None
+        try:
+            import somoclu
+            import patsy
+        except ImportError:
+            raise ImportError("Please install `somoclu` and `patsy` to run SOMDE, try `pip install somoclu patsy`.")
         if homogeneous_codebook:
             xmin, ymin = X.min(0)
             xmax, ymax = X.max(0)

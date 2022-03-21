@@ -12,15 +12,13 @@ jobs:
         python-version: [ '3.7', '3.8', '3.9', '3.10' ]
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
           pip install numpy pandas scipy
-          pip install somoclu
-          pip install patsy
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -49,7 +47,7 @@ jobs:
           pip install pytest
           pytest tests/
       - name: Upload wheels
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: dist
@@ -63,16 +61,14 @@ jobs:
           { python-architecture: "x64", target: "x86_64-pc-windows-msvc" },
         ]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.platform.python-architecture }}
       - name: Install dependencies
         run: |
           pip install numpy pandas scipy
-          pip install somoclu
-          pip install patsy
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -93,7 +89,7 @@ jobs:
           pip install pytest
           pytest tests/
       - name: Upload wheels
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: dist
@@ -106,15 +102,13 @@ jobs:
         target:
           - x86_64-unknown-linux-gnu
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
           pip install numpy pandas scipy
-          pip install somoclu
-          pip install patsy
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -136,7 +130,7 @@ jobs:
           pip install pytest
           pytest tests/
       - name: Upload wheels
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: dist
@@ -145,7 +139,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [macos, windows, linux]
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: wheels
       - name: List dists

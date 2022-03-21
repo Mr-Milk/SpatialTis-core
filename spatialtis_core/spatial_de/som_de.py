@@ -13,7 +13,11 @@ def somde(exp: pd.DataFrame,
           epoch: int = 100,
           pval: float = 0.05,
           qval: float = 0.05) -> np.ndarray:
-    """A wrapper for somde
+    """A wrapper for somde, a method to identify spatial variable genes
+
+    `Publications <https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btab471/6308937>`_
+
+    Github: `SOMDE <https://github.com/WhirlFirst/somde>`_
 
     Args:
         exp: A dataframe, gene name as index, spatial points as columns

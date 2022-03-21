@@ -4,10 +4,36 @@ use nalgebra_sparse::ops::Op;
 use nalgebra_sparse::ops::serial::{spadd_csr_prealloc, spadd_pattern};
 use ndarray::parallel::prelude::*;
 use ndarray::prelude::*;
+use numpy::PyReadonlyArray2;
+use pyo3::prelude::*;
 
 use crate::utils::zscore2pvalue;
 
+pub(crate) fn register(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(spatial_weights_sparse_matrix, m)?)?;
+    m.add_function(wrap_pyfunction!(moran_i_parallel, m)?)?;
+    m.add_function(wrap_pyfunction!(geary_c_parallel, m)?)?;
+    Ok(())
+}
+
+#[pyfunction]
+pub fn moran_i_parallel(x: PyReadonlyArray2<f64>, neighbors: Vec<Vec<usize>>, labels: Vec<usize>, two_tailed: bool, pval: f64) -> Vec<(f64, f64, f64)> {
+    let x: ArrayView2<f64> = x.as_array();
+    let w = SpatialWeight::from_neighbors(neighbors, labels);
+    x.outer_iter().into_par_iter().map(|row| moran_i_index(row, w.clone(), two_tailed, pval)).collect()
+}
+
+#[pyfunction]
+pub fn geary_c_parallel(x: PyReadonlyArray2<f64>, neighbors: Vec<Vec<usize>>, labels: Vec<usize>, pval: f64) -> Vec<(f64, f64, f64)> {
+    let x: ArrayView2<f64> = x.as_array();
+    let w = SpatialWeight::from_neighbors(neighbors, labels);
+    x.outer_iter().into_par_iter().map(|row| geary_c_index(row, w.clone(), pval)).collect()
+}
+
+
 // Acquire spatial weights matrix from neighbors relationships
+#[pyfunction]
+#[pyo3(name = "build_neighbors_matrix")]
 pub fn spatial_weights_sparse_matrix(neighbors: Vec<Vec<usize>>, labels: Vec<usize>)
                                      -> (usize, Vec<usize>, Vec<usize>, Vec<usize>, Vec<f64>)
 // (shape_n, indptr, indice (or called `col_index`), row_index, data)
@@ -90,20 +116,6 @@ impl SpatialWeight {
         let z_col: Array1<f64> = self.col_index.iter().map(|i| z[*i]).collect();
         (&w * (&z_row - &z_col).mapv(|a| a.powi(2))).sum()
     }
-}
-
-
-pub fn moran_i_parallel(x: ArrayView2<f64>, neighbors: Vec<Vec<usize>>, labels: Vec<usize>, two_tailed: bool, pval: f64) -> Vec<(f64, f64, f64)> {
-    let w = SpatialWeight::from_neighbors(neighbors, labels);
-    x.outer_iter().into_par_iter().map(|row| moran_i_index(row, w.clone(), two_tailed, pval)).collect()
-}
-
-
-pub fn geary_c_parallel(x: ArrayView2<f64>, neighbors: Vec<Vec<usize>>, labels: Vec<usize>, pval: f64) -> Vec<(f64, f64, f64)> {
-    let w = SpatialWeight::from_neighbors(neighbors, labels);
-    let mut result = vec![];
-    x.outer_iter().into_par_iter().map(|row| geary_c_index(row, w.clone(), pval)).collect_into_vec(&mut result);
-    result
 }
 
 

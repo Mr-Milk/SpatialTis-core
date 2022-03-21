@@ -8,6 +8,4 @@ dependencies = [
     'numpy',
     'pandas',
     'scipy',
-    'somoclu',
-    'patsy'
 ]

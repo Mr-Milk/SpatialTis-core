@@ -1,7 +1,7 @@
 from spatialtis_core import points_bbox, multipoints_bbox, polygons_area, multipolygons_area, points_shapes
 
-points = [(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.5, 0.5)]
-rect = [(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0)]
+points = [[0.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.5, 0.5]]
+rect = [[0.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, 0.0]]
 
 
 def test_points_bbox():

@@ -72,6 +72,6 @@ autoapi_options = ['members',
                    'special-members',
                    'imported-members', ]
 autoapi_dirs = ['../spatialtis_core']
-autoapi_file_patterns = ['*.pyi']
+autoapi_file_patterns = ['*.pyi', '*.py']
 autoapi_member_order = "groupwise"
 

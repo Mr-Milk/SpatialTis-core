@@ -2,12 +2,20 @@ use itertools::Itertools;
 use kiddo::distance::squared_euclidean;
 use ndarray::prelude::*;
 use ndarray_stats::QuantileExt;
+use pyo3::prelude::*;
 
+use crate::custom_type::Point2D;
 use crate::neighbors_search::kdtree_builder;
 use crate::quad_stats::QuadStats;
 use crate::utils::zscore2pvalue;
 
-pub fn hotspot(points: Vec<(f64, f64)>,
+pub(crate) fn register(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(hotspot, m)?)?;
+    Ok(())
+}
+
+#[pyfunction]
+pub fn hotspot(points: Vec<Point2D>,
                bbox: (f64, f64, f64, f64),
                search_level: usize,
                quad: Option<(usize, usize)>,
@@ -15,7 +23,7 @@ pub fn hotspot(points: Vec<(f64, f64)>,
                pval: f64,
                min_cells: usize, ) -> Vec<bool> {
     let n = points.len();
-    if n == 0 { return vec![] };
+    if n == 0 { return vec![]; };
     let mut q = QuadStats::new();
     let counts = q.grid_counts(points, Option::from(bbox), quad, rect_side);
     let nx = q.nx;
@@ -26,10 +34,10 @@ pub fn hotspot(points: Vec<(f64, f64)>,
     } else {
         let quad_count = Array::from_shape_vec((nx, ny),
                                                counts.values().into_iter().map(|x| *x as f64).collect_vec()).unwrap();
-        let mut idx_points = vec![(0.0, 0.0); nx * ny];
+        let mut idx_points = vec![[0.0, 0.0]; nx * ny];
         for i in 0..nx {
             for j in 0..ny {
-                idx_points[i + j] = (i as f64, j as f64)
+                idx_points[i + j] = [i as f64, j as f64]
             }
         }
 
@@ -43,7 +51,7 @@ pub fn hotspot(points: Vec<(f64, f64)>,
             vec![false; n]
         } else {
             let hot_rect: Vec<bool> = idx_points.iter().map(|p| {
-                let neighbors = tree.within_unsorted(&[p.0, p.1],
+                let neighbors = tree.within_unsorted(&p,
                                                      search_level as f64 * 2.0_f64.sqrt() + 0.0001,
                                                      &squared_euclidean).unwrap();
                 let sum_w = neighbors.len() as f64;
@@ -52,8 +60,8 @@ pub fn hotspot(points: Vec<(f64, f64)>,
 
                 for (id, neighbor) in neighbors.iter().enumerate() {
                     let pp = idx_points[*neighbor.1];
-                    ix[id] = pp.0 as usize;
-                    iy[id] = pp.1 as usize;
+                    ix[id] = pp[0] as usize;
+                    iy[id] = pp[1] as usize;
                 };
                 let ix_min = *ix.min().unwrap();
                 let ix_max = *ix.max().unwrap();

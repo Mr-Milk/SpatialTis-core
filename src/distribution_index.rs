@@ -1,9 +1,11 @@
 use itertools::Itertools;
 use kiddo::distance::squared_euclidean;
 use ndarray::Array1;
+use pyo3::prelude::*;
 use rand::{Rng, thread_rng};
 use rayon::prelude::*;
 
+use crate::custom_type::{BBox, BBox3D, Point2D, Point3D};
 use crate::neighbors_search::kdtree_builder;
 use crate::quad_stats::QuadStats;
 use crate::utils::{chisquare2pvalue, zscore2pvalue};
@@ -11,8 +13,25 @@ use crate::utils::{chisquare2pvalue, zscore2pvalue};
 const EMPTY_RETURN: (f64, f64, usize) = (0.0, 0.0, 0);
 
 
-pub fn ix_dispersion_parallel(points_collections: Vec<Vec<(f64, f64)>>,
-                              bbox: (f64, f64, f64, f64),
+pub(crate) fn register(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(ix_dispersion_parallel, m)?)?;
+    m.add_function(wrap_pyfunction!(ix_dispersion_3d_parallel, m)?)?;
+    m.add_function(wrap_pyfunction!(morisita_parallel, m)?)?;
+    m.add_function(wrap_pyfunction!(clark_evans_parallel, m)?)?;
+    Ok(())
+}
+
+
+fn bbox_side_part(bbox: BBox) -> (f64, f64) {
+    // -> (min_side, max_side)
+    let x_range = bbox.2 - bbox.0;
+    let y_range = bbox.3 - bbox.1;
+    if x_range <= y_range { (x_range, y_range) } else { (y_range, x_range) }
+}
+
+#[pyfunction]
+pub fn ix_dispersion_parallel(points_collections: Vec<Vec<Point2D>>,
+                              bbox: BBox,
                               r: f64,
                               resample: usize,
                               pval: f64,
@@ -21,8 +40,20 @@ pub fn ix_dispersion_parallel(points_collections: Vec<Vec<(f64, f64)>>,
     points_collections.into_par_iter().map(|p| ix_dispersion(p, bbox, r, resample, pval, min_cells)).collect()
 }
 
-pub fn morisita_parallel(points_collections: Vec<Vec<(f64, f64)>>,
-                         bbox: (f64, f64, f64, f64),
+#[pyfunction]
+pub fn ix_dispersion_3d_parallel(points_collections: Vec<Vec<Point3D>>,
+                                 bbox: BBox3D,
+                                 r: f64,
+                                 resample: usize,
+                                 pval: f64,
+                                 min_cells: usize, ) -> Vec<(f64, f64, usize)>
+{
+    points_collections.into_par_iter().map(|p| ix_dispersion_3d(p, bbox, r, resample, pval, min_cells)).collect()
+}
+
+#[pyfunction]
+pub fn morisita_parallel(points_collections: Vec<Vec<Point2D>>,
+                         bbox: BBox,
                          quad: Option<(usize, usize)>,
                          rect_side: Option<(f64, f64)>,
                          pval: f64,
@@ -31,8 +62,9 @@ pub fn morisita_parallel(points_collections: Vec<Vec<(f64, f64)>>,
     points_collections.into_par_iter().map(|p| morisita_ix(p, bbox, quad, rect_side, pval, min_cells)).collect()
 }
 
-pub fn clark_evans_parallel(points_collections: Vec<Vec<(f64, f64)>>,
-                            bbox: (f64, f64, f64, f64),
+#[pyfunction]
+pub fn clark_evans_parallel(points_collections: Vec<Vec<Point2D>>,
+                            bbox: BBox,
                             pval: f64,
                             min_cells: usize, ) -> Vec<(f64, f64, usize)>
 {
@@ -40,8 +72,8 @@ pub fn clark_evans_parallel(points_collections: Vec<Vec<(f64, f64)>>,
 }
 
 
-pub fn ix_dispersion(points: Vec<(f64, f64)>,
-                     bbox: (f64, f64, f64, f64),
+pub fn ix_dispersion(points: Vec<Point2D>,
+                     bbox: BBox,
                      r: f64,
                      resample: usize,
                      pval: f64,
@@ -76,8 +108,45 @@ pub fn ix_dispersion(points: Vec<(f64, f64)>,
     };
 }
 
-pub fn morisita_ix(points: Vec<(f64, f64)>,
-                   bbox: (f64, f64, f64, f64),
+pub fn ix_dispersion_3d(points: Vec<Point3D>,
+                        bbox: BBox3D,
+                        r: f64,
+                        resample: usize,
+                        pval: f64,
+                        min_cells: usize,
+) -> (f64, f64, usize) // return (index_value, p_value, pattern)
+{
+    let n = points.len();
+    return if n < min_cells {
+        EMPTY_RETURN
+    } else {
+        let labels: Vec<usize> = (0..n).into_iter().collect();
+        let tree = kdtree_builder(&points, &labels);
+        let mut counts = vec![0.0; resample];
+        let mut rng = thread_rng();
+        for i in 0..resample {
+            let x: f64 = rng.gen_range(bbox.0..bbox.3);
+            let y: f64 = rng.gen_range(bbox.1..bbox.4);
+            let z: f64 = rng.gen_range(bbox.2..bbox.5);
+            let within = tree.within_unsorted(&[x, y, z], r, &squared_euclidean).unwrap();
+            counts[i] = within.len() as f64;
+        };
+
+        let counts = Array1::from_vec(counts);
+        let counts_mean = counts.mean().unwrap();
+        if counts_mean != 0.0 {
+            let id = counts.var(0.0) / counts_mean;
+            let ddof = (n - 1) as f64;
+            let chi2_v = ddof * id;
+            let p_value = chisquare2pvalue(chi2_v, ddof);
+            let pattern = get_pattern(id, p_value, pval);
+            (id, p_value, pattern)
+        } else { EMPTY_RETURN } // if sample nothing, return 0
+    };
+}
+
+pub fn morisita_ix(points: Vec<Point2D>,
+                   bbox: BBox,
                    quad: Option<(usize, usize)>,
                    rect_side: Option<(f64, f64)>,
                    pval: f64,
@@ -103,8 +172,8 @@ pub fn morisita_ix(points: Vec<(f64, f64)>,
 }
 
 
-pub fn clark_evans_ix(points: Vec<(f64, f64)>,
-                      bbox: (f64, f64, f64, f64),
+pub fn clark_evans_ix(points: Vec<Point2D>,
+                      bbox: BBox,
                       pval: f64,
                       min_cells: usize, )
                       -> (f64, f64, usize) {
@@ -117,9 +186,9 @@ pub fn clark_evans_ix(points: Vec<(f64, f64)>,
 
         let area = (bbox.2 - bbox.0) * (bbox.3 - bbox.1);
         let r: Array1<f64> = points.iter().map(|p| {
-            let nearest = tree.nearest(&[p.0, p.1], 2, &squared_euclidean).unwrap();
+            let nearest = tree.nearest(&p, 2, &squared_euclidean).unwrap();
             let np = points[*nearest[1].1];
-            squared_euclidean(&[np.0, np.1], &[p.0, p.1])
+            squared_euclidean(&np, &p)
         }).collect();
         let intensity = n as f64 / area;
         let nnd_mean = r.mean().unwrap();

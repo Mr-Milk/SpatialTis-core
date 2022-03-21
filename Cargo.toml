@@ -1,8 +1,8 @@
 [package]
 name = "spatialtis_core"
-version = "0.1.2"
+version = "0.2.0"
 authors = ["Milk <zym.zym1220@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [package.metadata.maturin]
 classifier = [
@@ -36,9 +36,9 @@ ndarray = { version = "0.15.4", features =['rayon'] }
 ndarray-stats = "0.5.0"
 num-traits = "0.2.14"
 statrs = "0.15.0"
-numpy = "0.15.0"
 nalgebra-sparse = "0.5.0"
-wkt = "0.9.2"
+permutation = "0.4.0"
+wkt = "0.10.0"
 
 [profile.dev]
 opt-level = 3
@@ -47,8 +47,11 @@ opt-level = 3
 name = "spatialtis_core"
 crate-type = ["cdylib"]
 
+[dependencies.numpy]
+version = "0.16.1"
+
 [dependencies.pyo3]
-version = "0.15.1"
+version = "0.16.1"
 features = ["extension-module"]
 
 [target.x86_64-apple-darwin]

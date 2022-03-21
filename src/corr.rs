@@ -4,7 +4,34 @@ use counter::Counter;
 use itertools::Itertools;
 use ndarray::parallel::prelude::*;
 use ndarray::prelude::*;
+use numpy::{PyArray1, PyReadonlyArray2, ToPyArray};
 use ordered_float::OrderedFloat;
+use pyo3::prelude::*;
+
+pub(crate) fn register(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(spearman_corr, m)?)?;
+    m.add_function(wrap_pyfunction!(pearson_corr, m)?)?;
+    Ok(())
+}
+
+#[pyfunction]
+pub fn spearman_corr<'py>(py: Python<'py>, data1: PyReadonlyArray2<f64>, data2: PyReadonlyArray2<f64>)
+                          -> &'py PyArray1<f64> {
+    let data1: ArrayView2<f64> = data1.as_array();
+    let data2: ArrayView2<f64> = data2.as_array();
+
+    pair2_spearman(data1, data2).to_pyarray(py)
+}
+
+
+#[pyfunction]
+pub fn pearson_corr<'py>(py: Python<'py>, data1: PyReadonlyArray2<f64>, data2: PyReadonlyArray2<f64>)
+                         -> &'py PyArray1<f64> {
+    let data1: ArrayView2<f64> = data1.as_array();
+    let data2: ArrayView2<f64> = data2.as_array();
+
+    pair2_pearson(data1, data2).to_pyarray(py)
+}
 
 fn arr_mean_stack(arr: ArrayView2<f64>) -> (Array2<f64>, Array1<f64>) {
     let arr_mean: Array1<f64> = arr.mean_axis(Axis(1)).unwrap();
@@ -16,22 +43,22 @@ fn arr_mean_stack(arr: ArrayView2<f64>) -> (Array2<f64>, Array1<f64>) {
     return (arr_means, arr_meanss);
 }
 
-pub fn pair_pearson(arr: ArrayView2<f64>) -> Array1<f64>
-{
-    let s = arr.shape()[0];
-    let (arr_means, arr_meanss) = arr_mean_stack(arr);
-    let combs: Vec<(usize, usize)> = (0..s).combinations(2)
-        .into_iter()
-        .map(|i| (i[0], i[1]))
-        .collect();
-    combs.into_iter().map(|(s1, s2)| {
-        let c1 = arr_means.slice(s![s1, ..]);
-        let c2 = arr_means.slice(s![s2, ..]);
-        let ss_c1 = arr_meanss[s1];
-        let ss_c2 = arr_meanss[s2];
-        (&c1 * &c2).sum() / (ss_c1 * ss_c2)
-    }).collect()
-}
+// pub fn pair_pearson(arr: ArrayView2<f64>) -> Array1<f64>
+// {
+//     let s = arr.shape()[0];
+//     let (arr_means, arr_meanss) = arr_mean_stack(arr);
+//     let combs: Vec<(usize, usize)> = (0..s).combinations(2)
+//         .into_iter()
+//         .map(|i| (i[0], i[1]))
+//         .collect();
+//     combs.into_iter().map(|(s1, s2)| {
+//         let c1 = arr_means.slice(s![s1, ..]);
+//         let c2 = arr_means.slice(s![s2, ..]);
+//         let ss_c1 = arr_meanss[s1];
+//         let ss_c2 = arr_meanss[s2];
+//         (&c1 * &c2).sum() / (ss_c1 * ss_c2)
+//     }).collect()
+// }
 
 pub fn pair2_pearson(arr1: ArrayView2<f64>, arr2: ArrayView2<f64>) -> Array1<f64>
 {
@@ -80,16 +107,16 @@ fn spearman_rank(arr: ArrayView1<f64>) -> Array1<f64> {
     arr.iter().map(|a| *rank.get(&OrderedFloat(*a)).unwrap()).collect()
 }
 
-pub fn pair_spearman(arr: ArrayView2<f64>) -> Array1<f64> {
-    let arr_c = arr.to_owned();
-    let s = arr.shape()[1];
-    let mut m: Array2<f64> = Array::zeros((0, s));
-    arr_c.axis_iter(Axis(0))
-        .for_each(|a| {
-            m.push_row(spearman_rank(a).view()).unwrap();
-        });
-    pair_pearson(m.view())
-}
+// pub fn pair_spearman(arr: ArrayView2<f64>) -> Array1<f64> {
+//     let arr_c = arr.to_owned();
+//     let s = arr.shape()[1];
+//     let mut m: Array2<f64> = Array::zeros((0, s));
+//     arr_c.axis_iter(Axis(0))
+//         .for_each(|a| {
+//             m.push_row(spearman_rank(a).view()).unwrap();
+//         });
+//     pair_pearson(m.view())
+// }
 
 
 pub fn pair2_spearman(arr1: ArrayView2<f64>, arr2: ArrayView2<f64>) -> Array1<f64> {

@@ -1,15 +1,17 @@
 from collections import Counter
+from typing import List
 
 import numpy as np
 from scipy.stats import entropy
 
 from spatialtis_core import spatial_autocorr, spatial_distribution_pattern, spatial_entropy, points_neighbors, getis_ord
 
-points = [(x, y) for x, y in np.random.randn(100, 2)]
+N = 100
+points: List[List[float]] = np.random.randn(N, 2).tolist()
 labels = [i for i in range(len(points))]
-types = [i for i in np.random.choice([1, 2, 3, 4, 5, 6], 100)]
-neighbors = points_neighbors(points, k=3)
-exp = np.random.randn(2, 100)
+types = [str(i) for i in np.random.choice([1, 2, 3, 4, 5, 6], N)]
+neighbors = points_neighbors(points, labels, k=3)
+exp = np.random.randn(2, N)
 
 
 def test_spatial_autocorr():
@@ -37,6 +39,8 @@ def test_spatial_entropy():
     e = entropy(np.array(list(Counter(types).values())))
     e1 = spatial_entropy([points], [types], method="leibovici")
     e2 = spatial_entropy([points], [types], method="altieri")
+    assert e1[0] > e
+    assert e2[0] > e
 
 
 def test_hotspot():

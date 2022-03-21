@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use crate::geo::points2bbox;
+use crate::custom_type::{BBox, Point2D};
+use crate::geo::points_bbox;
 
 pub struct QuadStats {
     pub(crate) nx: usize,
@@ -18,12 +19,13 @@ impl QuadStats {
     }
 
     pub fn grid_counts(&mut self,
-                       points: Vec<(f64, f64)>,
-                       bbox: Option<(f64, f64, f64, f64)>,
+                       points: Vec<Point2D>,
+                       bbox: Option<BBox>,
                        quad: Option<(usize, usize)>,
                        rect_side: Option<(f64, f64)>,
-    ) -> HashMap<usize, usize> {
-        let points_bbox = points2bbox(points.to_owned());
+    ) -> HashMap<usize, usize>
+    {
+        let points_bbox = points_bbox(points.to_owned());
         let bbox = match bbox {
             Some(data) => {
                 if (data.0 <= points_bbox.0) &
@@ -86,8 +88,8 @@ impl QuadStats {
         let mut dict_id_count: HashMap<usize, usize> = dict_id.iter().map(|i| (*i, 0)).collect();
 
         for point in points {
-            let mut index_x = ((point.0 - bbox.0) / wx).floor() as usize;
-            let mut index_y = ((point.1 - bbox.1) / hy).floor() as usize;
+            let mut index_x = ((point[0] - bbox.0) / wx).floor() as usize;
+            let mut index_y = ((point[1] - bbox.1) / hy).floor() as usize;
             if index_x == self.nx { index_x -= 1 };
             if index_y == self.ny { index_y -= 1 };
             let id_ = index_y * self.nx + index_x;
