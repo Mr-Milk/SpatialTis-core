@@ -6,19 +6,6 @@ from scipy.sparse import csr_matrix
 from .types import Neighbors, Labels
 
 
-def spatial_weight(neighbors: Neighbors, labels: Labels) -> csr_matrix:
-    """Build a neighbors sparse matrix from neighbors data
-
-    Args:
-        neighbors: List of neighbors
-        labels: List of neighbors
-
-    Return:
-        A scipy sparse matrix in csr format
-
-    """
-
-
 def neighbor_components(neighbors: Neighbors,
                         labels: Labels,
                         types: List[str],
@@ -42,9 +29,7 @@ def comb_bootstrap(exp_matrix: np.ndarray,
                    neighbors: Neighbors,
                    labels: Labels,
                    pval: float = 0.05,
-                   order: bool = False,
                    times: int = 1000,
-                   ignore_self: bool = False,
                    ) -> List[Tuple[str, str, float]]:
     """
     Bootstrap between two types
@@ -58,9 +43,7 @@ def comb_bootstrap(exp_matrix: np.ndarray,
         neighbors: List of neighbors
         labels: List of labels
         pval: The threshold of p-value
-        order: If order, (A, B) and (B, A) is different
         times: How many times to perform bootstrap
-        ignore_self: Whether to consider self as a neighbor
 
     Return:
         The significance between markers List of (marker1, marker2, p-value)
@@ -87,7 +70,6 @@ class CellCombs:
                   times: int = 1000,
                   pval: float = 0.05,
                   method: str = 'pval',
-                  ignore_self: bool = False,
                   ) -> List[Tuple[str, str, float]]:
         """
         Bootstrap functions
@@ -101,7 +83,6 @@ class CellCombs:
             times: How many times to perform bootstrap
             pval: The threshold of p-value
             method: 'pval' or 'zscore'
-            ignore_self: Whether to consider self as a neighbor
 
         Return:
             List of tuples, eg.('a', 'b', 1.0), the type a and type b has a relationship as association

@@ -36,7 +36,6 @@ pub fn std_u(numbers: &Vec<usize>) -> f64 {
     }
 }
 
-
 pub fn std_f(numbers: &Vec<f64>) -> f64 {
     let l = numbers.len();
     if l > 0 {
@@ -54,7 +53,6 @@ pub fn std_f(numbers: &Vec<f64>) -> f64 {
         0.0
     }
 }
-
 
 #[cfg(test)]
 mod test {

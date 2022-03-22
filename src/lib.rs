@@ -6,20 +6,20 @@ use pyo3::prelude::*;
 use crate::stat::{mean_f, mean_u, std_f, std_u};
 use crate::utils::{py_kwarg, zscore2pvalue};
 
-mod preprocessing;
-mod utils;
-mod corr;
-mod stat;
-mod quad_stats;
-mod neighbors_search;
-mod geo;
-mod spatial_autocorr;
-mod distribution_index;
-mod hotspot;
-mod entropy;
-mod io;
 mod cell_interaction;
+mod corr;
 mod custom_type;
+mod distribution_index;
+mod entropy;
+mod geo;
+mod hotspot;
+mod io;
+mod neighbors_search;
+mod preprocessing;
+mod quad_stats;
+mod spatial_autocorr;
+mod stat;
+mod utils;
 
 #[pymodule]
 fn spatialtis_core<'py>(py: Python, m: &PyModule) -> PyResult<()> {
@@ -39,7 +39,6 @@ fn spatialtis_core<'py>(py: Python, m: &PyModule) -> PyResult<()> {
     // m.add_wrapped(wrap_pyfunction!(dumps_wkt_polygons))?;
     // m.add_wrapped(wrap_pyfunction!(reads_wkt_points))?;
     // m.add_wrapped(wrap_pyfunction!(reads_wkt_polygons))?;
-
 
     // corr & neighbor depdent markers
     corr::register(py, m)?;
@@ -74,7 +73,6 @@ fn spatialtis_core<'py>(py: Python, m: &PyModule) -> PyResult<()> {
     Ok(())
 }
 
-
 // #[pyfunction]
 // pub fn pdist<'py>(py: Python<'py>, points: PyReadonlyArray2<f64>, par: bool) -> &'py PyArray1<f64> {
 //     let points = points.as_array();
@@ -84,7 +82,6 @@ fn spatialtis_core<'py>(py: Python, m: &PyModule) -> PyResult<()> {
 //         pdist_2d(points).into_pyarray(py)
 //     }
 // }
-
 
 // #[pyfunction]
 // pub fn multipoints_bbox(points_collections: Vec<Vec<(f64, f64)>>)
@@ -175,7 +172,6 @@ fn spatialtis_core<'py>(py: Python, m: &PyModule) -> PyResult<()> {
 //     }
 // }
 
-
 // #[pyfunction]
 // pub fn bbox_neighbors(bbox: Vec<(f64, f64, f64, f64)>,
 //                       labels: Option<Vec<usize>>,
@@ -190,11 +186,13 @@ fn spatialtis_core<'py>(py: Python, m: &PyModule) -> PyResult<()> {
 //     bbox_neighbors_rtree(init_bbox(bbox, labels), expand, scale)
 // }
 
-
 // compute the number of different cells at neighbors
 #[pyfunction]
-pub fn neighbor_components(neighbors: Vec<Vec<usize>>, labels: Vec<usize>, types: Vec<&str>)
-                           -> (Vec<&str>, Vec<Vec<usize>>) {
+pub fn neighbor_components(
+    neighbors: Vec<Vec<usize>>,
+    labels: Vec<usize>,
+    types: Vec<&str>,
+) -> (Vec<&str>, Vec<Vec<usize>>) {
     let mut uni_types: HashMap<&str, i64> = HashMap::new();
     let mut types_mapper: HashMap<usize, &str> = HashMap::new();
     for (i, t) in labels.iter().zip(types.iter()) {
@@ -202,21 +200,30 @@ pub fn neighbor_components(neighbors: Vec<Vec<usize>>, labels: Vec<usize>, types
         uni_types.entry(t).or_insert(0);
     }
     let uni_types: Vec<&str> = uni_types.keys().map(|k| *k).collect();
-    let result: Vec<Vec<usize>> = neighbors.iter().map(|neigh| {
-        let count: HashMap<&&str, usize> = neigh.iter().map(|i| types_mapper.get(i).unwrap()).collect::<Counter<_>>().into_map();
-        let result_v: Vec<usize> = uni_types.iter().map(|t| {
-            let v: usize = match count.get(&t) {
-                Some(v) => *v,
-                None => { 0 }
-            };
-            v
-        }).collect();
-        result_v
-    }).collect();
+    let result: Vec<Vec<usize>> = neighbors
+        .iter()
+        .map(|neigh| {
+            let count: HashMap<&&str, usize> = neigh
+                .iter()
+                .map(|i| types_mapper.get(i).unwrap())
+                .collect::<Counter<_>>()
+                .into_map();
+            let result_v: Vec<usize> = uni_types
+                .iter()
+                .map(|t| {
+                    let v: usize = match count.get(&t) {
+                        Some(v) => *v,
+                        None => 0,
+                    };
+                    v
+                })
+                .collect();
+            result_v
+        })
+        .collect();
 
     (uni_types, result)
 }
-
 
 // Constructor function
 //
@@ -381,7 +388,6 @@ pub fn neighbor_components(neighbors: Vec<Vec<usize>>, labels: Vec<usize>, types
 //     }
 // }
 
-
 // #[pyfunction]
 // pub fn fast_corr<'py>(py: Python<'py>, data1: PyReadonlyArray2<f64>, data2: PyReadonlyArray2<f64>, method: Option<&str>)
 //                       -> &'py PyArray1<f64> {
@@ -395,7 +401,6 @@ pub fn neighbor_components(neighbors: Vec<Vec<usize>>, labels: Vec<usize>, types
 //
 //     r.to_pyarray(py)
 // }
-
 
 // #[pyfunction]
 // pub fn spatial_distribution_pattern(points_collections: Vec<Vec<(f64, f64)>>,
@@ -420,7 +425,6 @@ pub fn neighbor_components(neighbors: Vec<Vec<usize>>, labels: Vec<usize>, types
 //     }
 // }
 
-
 // #[pyfunction]
 // pub fn spatial_entropy(points_collections: Vec<Vec<Point2D>>,
 //                        types_collections: Vec<Vec<&str>>,
@@ -439,6 +443,3 @@ pub fn neighbor_components(neighbors: Vec<Vec<usize>>, labels: Vec<usize>, types
 //         _ => leibovici_parallel(points_collections, types_collections, d),
 //     }
 // }
-
-
-

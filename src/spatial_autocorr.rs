@@ -1,7 +1,7 @@
 use itertools::min;
-use nalgebra_sparse::CsrMatrix;
-use nalgebra_sparse::ops::Op;
 use nalgebra_sparse::ops::serial::{spadd_csr_prealloc, spadd_pattern};
+use nalgebra_sparse::ops::Op;
+use nalgebra_sparse::CsrMatrix;
 use ndarray::parallel::prelude::*;
 use ndarray::prelude::*;
 use numpy::PyReadonlyArray2;
@@ -17,25 +17,43 @@ pub(crate) fn register(_py: Python, m: &PyModule) -> PyResult<()> {
 }
 
 #[pyfunction]
-pub fn moran_i_parallel(x: PyReadonlyArray2<f64>, neighbors: Vec<Vec<usize>>, labels: Vec<usize>, two_tailed: bool, pval: f64) -> Vec<(f64, f64, f64)> {
+pub fn moran_i_parallel(
+    x: PyReadonlyArray2<f64>,
+    neighbors: Vec<Vec<usize>>,
+    labels: Vec<usize>,
+    two_tailed: bool,
+    pval: f64,
+) -> Vec<(f64, f64, f64)> {
     let x: ArrayView2<f64> = x.as_array();
     let w = SpatialWeight::from_neighbors(neighbors, labels);
-    x.outer_iter().into_par_iter().map(|row| moran_i_index(row, w.clone(), two_tailed, pval)).collect()
+    x.outer_iter()
+        .into_par_iter()
+        .map(|row| moran_i_index(row, w.clone(), two_tailed, pval))
+        .collect()
 }
 
 #[pyfunction]
-pub fn geary_c_parallel(x: PyReadonlyArray2<f64>, neighbors: Vec<Vec<usize>>, labels: Vec<usize>, pval: f64) -> Vec<(f64, f64, f64)> {
+pub fn geary_c_parallel(
+    x: PyReadonlyArray2<f64>,
+    neighbors: Vec<Vec<usize>>,
+    labels: Vec<usize>,
+    pval: f64,
+) -> Vec<(f64, f64, f64)> {
     let x: ArrayView2<f64> = x.as_array();
     let w = SpatialWeight::from_neighbors(neighbors, labels);
-    x.outer_iter().into_par_iter().map(|row| geary_c_index(row, w.clone(), pval)).collect()
+    x.outer_iter()
+        .into_par_iter()
+        .map(|row| geary_c_index(row, w.clone(), pval))
+        .collect()
 }
-
 
 // Acquire spatial weights matrix from neighbors relationships
 #[pyfunction]
 #[pyo3(name = "build_neighbors_matrix")]
-pub fn spatial_weights_sparse_matrix(neighbors: Vec<Vec<usize>>, labels: Vec<usize>)
-                                     -> (usize, Vec<usize>, Vec<usize>, Vec<usize>, Vec<f64>)
+pub fn spatial_weights_sparse_matrix(
+    neighbors: Vec<Vec<usize>>,
+    labels: Vec<usize>,
+) -> (usize, Vec<usize>, Vec<usize>, Vec<usize>, Vec<f64>)
 // (shape_n, indptr, indice (or called `col_index`), row_index, data)
 {
     let n = neighbors.len();
@@ -57,10 +75,9 @@ pub fn spatial_weights_sparse_matrix(neighbors: Vec<Vec<usize>>, labels: Vec<usi
         });
         ptr += nn;
         indptr.push(ptr);
-    };
+    }
     (n, indptr, indice, row_index, data)
 }
-
 
 #[derive(Clone)]
 pub struct SpatialWeight {
@@ -85,8 +102,15 @@ impl SpatialWeight {
         spadd_csr_prealloc(1.0, &mut w1, 1.0, Op::Transpose(&w_sparse)).unwrap();
         let w1_data: Array1<f64> = w1.values().iter().map(|i| *i).collect();
         let s1 = (&w1_data * &w1_data).sum() / 2.0;
-        let w_sum0: Array1<f64> = w_sparse.transpose().row_iter().map(|row| row.values().iter().fold(0.0, |acc, a| acc + *a)).collect();
-        let w_sum1: Array1<f64> = w_sparse.row_iter().map(|row| row.values().iter().fold(0.0, |acc, a| acc + *a)).collect();
+        let w_sum0: Array1<f64> = w_sparse
+            .transpose()
+            .row_iter()
+            .map(|row| row.values().iter().fold(0.0, |acc, a| acc + *a))
+            .collect();
+        let w_sum1: Array1<f64> = w_sparse
+            .row_iter()
+            .map(|row| row.values().iter().fold(0.0, |acc, a| acc + *a))
+            .collect();
         let s2 = (&w_sum0 + &w_sum1).mapv(|a| a.powi(2)).sum();
         let s02 = w_sum * w_sum;
 
@@ -102,11 +126,15 @@ impl SpatialWeight {
     }
 
     pub fn wx_i(&self, z: Array1<f64>) -> f64 {
-        let w: Array1<f64> = self.w_sparse.row_iter().map(|row| {
-            let pz: Array1<f64> = row.col_indices().iter().map(|i| z[*i]).collect();
-            let r = Array::from(row.values().to_vec());
-            (&r * &pz).sum()
-        }).collect();
+        let w: Array1<f64> = self
+            .w_sparse
+            .row_iter()
+            .map(|row| {
+                let pz: Array1<f64> = row.col_indices().iter().map(|i| z[*i]).collect();
+                let r = Array::from(row.values().to_vec());
+                (&r * &pz).sum()
+            })
+            .collect();
         (&w * &z).sum()
     }
 
@@ -118,9 +146,12 @@ impl SpatialWeight {
     }
 }
 
-
-pub fn moran_i_index(x: ArrayView1<f64>, w: SpatialWeight, two_tailed: bool, pval: f64) -> (f64, f64, f64)
-{
+pub fn moran_i_index(
+    x: ArrayView1<f64>,
+    w: SpatialWeight,
+    two_tailed: bool,
+    pval: f64,
+) -> (f64, f64, f64) {
     let n: f64 = x.len() as f64;
     let s0 = w.w_sum;
     let s1 = w.s1;
@@ -143,7 +174,11 @@ pub fn moran_i_index(x: ArrayView1<f64>, w: SpatialWeight, two_tailed: bool, pva
     let se_i_norm = vi_norm.powf(1.0 / 2.0);
     let z_norm = (i_value - ei) / se_i_norm;
     let p_norm = zscore2pvalue(z_norm, two_tailed);
-    let pattern: f64 = if p_norm < pval { (i_value - ei).signum() } else { 0.0 };
+    let pattern: f64 = if p_norm < pval {
+        (i_value - ei).signum()
+    } else {
+        0.0
+    };
     (pattern, i_value, p_norm)
 }
 
@@ -175,14 +210,17 @@ pub fn geary_c_index(x: ArrayView1<f64>, w: SpatialWeight, pval: f64) -> (f64, f
     // let A: f64 = (n - 1.0) * s1 * (n2 - 3.0 * n - 6.0 - (n2 - n + 2.0) * k);
     // let B: f64 = (1.0 / 4.0) * ((n - 1.0) * s2 * (n2 + 3.0 * n - 6.0 - (n2 - n + 2.0) * k));
     // let C: f64 = s02 * (n2 - 3.0 - (n - 1.0).powi(2) * k);
-    let vc_norm = (1.0 / (2.0 * (n + 1.0) * s02)) *
-        ((2.0 * s1 + s2) * (n - 1.0) - 4.0 * s02);
+    let vc_norm = (1.0 / (2.0 * (n + 1.0) * s02)) * ((2.0 * s1 + s2) * (n - 1.0) - 4.0 * s02);
     let se_c_norm = vc_norm.powf(0.5);
 
     let de = c_value - 1.0;
     let z_norm = de / se_c_norm;
     let p_norm = zscore2pvalue(z_norm, false);
-    let pattern: f64 = if p_norm < pval { (1.0 - c_value).signum() } else { 0.0 };
+    let pattern: f64 = if p_norm < pval {
+        (1.0 - c_value).signum()
+    } else {
+        0.0
+    };
 
     (pattern, c_value, p_norm)
 }

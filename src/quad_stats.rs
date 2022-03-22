@@ -18,38 +18,41 @@ impl QuadStats {
         }
     }
 
-    pub fn grid_counts(&mut self,
-                       points: Vec<Point2D>,
-                       bbox: Option<BBox>,
-                       quad: Option<(usize, usize)>,
-                       rect_side: Option<(f64, f64)>,
-    ) -> HashMap<usize, usize>
-    {
+    pub fn grid_counts(
+        &mut self,
+        points: Vec<Point2D>,
+        bbox: Option<BBox>,
+        quad: Option<(usize, usize)>,
+        rect_side: Option<(f64, f64)>,
+    ) -> HashMap<usize, usize> {
         let points_bbox = points_bbox(points.to_owned());
         let bbox = match bbox {
             Some(data) => {
-                if (data.0 <= points_bbox.0) &
-                    (data.1 <= points_bbox.1) &
-                    (data.2 >= points_bbox.2) &
-                    (data.3 >= points_bbox.3) {
+                if (data.0 <= points_bbox.0)
+                    & (data.1 <= points_bbox.1)
+                    & (data.2 >= points_bbox.2)
+                    & (data.3 >= points_bbox.3)
+                {
                     data
                 } else {
                     println!("Provided bbox failed to cover all the points! Use the minimum bounding box");
                     points_bbox
                 }
             }
-            _ => points_bbox
+            _ => points_bbox,
         }; // if bbox is not provide, calculate it for user
 
         let width = bbox.2 - bbox.0;
         let height = bbox.3 - bbox.1;
 
-        match quad { // match to quad first
+        match quad {
+            // match to quad first
             Some(data) => {
                 self.nx = data.0;
                 self.ny = data.1;
             }
-            _ => { // if quad is None, match rect_side
+            _ => {
+                // if quad is None, match rect_side
                 match rect_side {
                     Some(rect) => {
                         let nx = (width / rect.0).floor() as usize;
@@ -61,7 +64,8 @@ impl QuadStats {
                             self.ny = ny;
                         }
                     }
-                    _ => { // if both quad and rect_side is failed, set quad to (10, 10)
+                    _ => {
+                        // if both quad and rect_side is failed, set quad to (10, 10)
                         self.nx = 10;
                         self.ny = 10;
                     }
@@ -69,7 +73,9 @@ impl QuadStats {
             }
         }
 
-        if (self.nx == 0) | (self.ny == 0) { panic!("quadratic cannot perform with 0 rectangles") }
+        if (self.nx == 0) | (self.ny == 0) {
+            panic!("quadratic cannot perform with 0 rectangles")
+        }
 
         let nx_f: f64 = self.nx as f64;
         let ny_f: f64 = self.ny as f64;
@@ -90,8 +96,12 @@ impl QuadStats {
         for point in points {
             let mut index_x = ((point[0] - bbox.0) / wx).floor() as usize;
             let mut index_y = ((point[1] - bbox.1) / hy).floor() as usize;
-            if index_x == self.nx { index_x -= 1 };
-            if index_y == self.ny { index_y -= 1 };
+            if index_x == self.nx {
+                index_x -= 1
+            };
+            if index_y == self.ny {
+                index_y -= 1
+            };
             let id_ = index_y * self.nx + index_x;
             let id_count = dict_id_count.get_mut(&id_).unwrap();
             *id_count += 1;

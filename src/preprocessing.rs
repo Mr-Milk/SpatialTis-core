@@ -5,8 +5,3 @@
 // convex_hull or concave_hull to determine the cell shape
 // return borders
 // fn cell_border() {}
-
-
-
-
-

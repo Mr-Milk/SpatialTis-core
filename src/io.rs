@@ -15,53 +15,66 @@ pub(crate) fn register(_py: Python, m: &PyModule) -> PyResult<()> {
     Ok(())
 }
 
-
 #[pyfunction]
 pub fn points_wkt(points: Vec<Point2D>) -> Vec<String> {
-    points.into_iter().map(|p| {
-        let p: Point<f64> = p.into();
-        let wkt = geo::Geometry::from(p).to_wkt();
-        format!("{}", wkt.item)
-    }).collect()
+    points
+        .into_iter()
+        .map(|p| {
+            let p: Point<f64> = p.into();
+            let wkt = geo::Geometry::from(p).to_wkt();
+            format!("{}", wkt.item)
+        })
+        .collect()
 }
 
 #[pyfunction]
 pub fn wkt_points(wkt_strings: Vec<&str>) -> Vec<Point2D> {
-    wkt_strings.into_iter().map(|w| {
-        let wkt_obj = match Wkt::from_str(w) {
-            Ok(result) => result,
-            Err(_) => panic!("Failed to parse the points, invalid format")
-        };
-        let p = geo::Point::try_from(wkt_obj).unwrap();
-        let (x, y) = p.x_y();
-        [x, y]
-    }).collect()
+    wkt_strings
+        .into_iter()
+        .map(|w| {
+            let wkt_obj = match Wkt::from_str(w) {
+                Ok(result) => result,
+                Err(_) => panic!("Failed to parse the points, invalid format"),
+            };
+            let p = geo::Point::try_from(wkt_obj).unwrap();
+            let (x, y) = p.x_y();
+            [x, y]
+        })
+        .collect()
 }
 
 #[pyfunction]
 pub fn polygons_wkt(polygons: Vec<Vec<Point2D>>) -> Vec<String> {
-    polygons.into_iter().map(|poly| {
-        let p = geo::Polygon::new(LineString::from(poly), vec![]);
-        let wkt = geo::Geometry::from(p).to_wkt();
-        format!("{}", wkt.item)
-    }).collect()
+    polygons
+        .into_iter()
+        .map(|poly| {
+            let p = geo::Polygon::new(LineString::from(poly), vec![]);
+            let wkt = geo::Geometry::from(p).to_wkt();
+            format!("{}", wkt.item)
+        })
+        .collect()
 }
 
 #[pyfunction]
 pub fn wkt_polygons(wkt_strings: Vec<&str>) -> Vec<Vec<Point2D>> {
-    wkt_strings.into_iter().map(|w| {
-        let wkt_obj = match Wkt::from_str(w) {
-            Ok(result) => result,
-            Err(_) => panic!("Failed to parse the shapes, invalid format")
-        };
-        let p = geo::Polygon::try_from(wkt_obj).unwrap();
-        p.exterior().points().map(|ip| {
-            let (x, y) = ip.x_y();
-            [x, y]
-        }).collect()
-    }).collect()
+    wkt_strings
+        .into_iter()
+        .map(|w| {
+            let wkt_obj = match Wkt::from_str(w) {
+                Ok(result) => result,
+                Err(_) => panic!("Failed to parse the shapes, invalid format"),
+            };
+            let p = geo::Polygon::try_from(wkt_obj).unwrap();
+            p.exterior()
+                .points()
+                .map(|ip| {
+                    let (x, y) = ip.x_y();
+                    [x, y]
+                })
+                .collect()
+        })
+        .collect()
 }
-
 
 #[cfg(test)]
 mod test {
@@ -95,6 +108,3 @@ mod test {
         println!("{:?}", wkt);
     }
 }
-
-
-

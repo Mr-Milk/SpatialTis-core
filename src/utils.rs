@@ -15,9 +15,13 @@ pub fn zscore2pvalue(z: f64, two_tailed: bool) -> f64 {
     let norm_dist: Normal = Normal::new(0.0, 1.0).unwrap(); // follow the scipy's default
     let mut p: f64 = if z > 0.0 {
         1.0 - norm_dist.cdf(z)
-    } else { norm_dist.cdf(z) };
+    } else {
+        norm_dist.cdf(z)
+    };
 
-    if two_tailed { p *= 2.0 }
+    if two_tailed {
+        p *= 2.0
+    }
 
     p
 }
@@ -26,7 +30,6 @@ pub fn chisquare2pvalue(chi2_value: f64, ddof: f64) -> f64 {
     let chi2_dist: ChiSquared = ChiSquared::new(ddof).unwrap();
     1.0 - chi2_dist.cdf(chi2_value)
 }
-
 
 // fn square_euclidean(p1: ArrayView1<f64>, p2: ArrayView1<f64>) -> f64 {
 //     let s = p1.to_owned() - p2.to_owned();
@@ -64,7 +67,6 @@ pub fn chisquare2pvalue(chi2_value: f64, ddof: f64) -> f64 {
 //     }
 //     result
 // }
-
 
 #[cfg(test)]
 mod test {}

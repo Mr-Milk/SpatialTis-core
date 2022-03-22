@@ -21,41 +21,56 @@ pub(crate) fn register(_py: Python, m: &PyModule) -> PyResult<()> {
 }
 
 #[pyfunction]
-pub fn leibovici_parallel(points_collections: Vec<Vec<Point2D>>,
-                          types_collections: Vec<Vec<&str>>,
-                          d: f64) -> Vec<f64> {
-    points_collections.into_par_iter().zip(types_collections).map(|(p, t)| {
-        leibovici_entropy(p, t, d)
-    }).collect()
+pub fn leibovici_parallel(
+    points_collections: Vec<Vec<Point2D>>,
+    types_collections: Vec<Vec<&str>>,
+    d: f64,
+) -> Vec<f64> {
+    points_collections
+        .into_par_iter()
+        .zip(types_collections)
+        .map(|(p, t)| leibovici_entropy(p, t, d))
+        .collect()
 }
 
 #[pyfunction]
-pub fn leibovici_3d_parallel(points_collections: Vec<Vec<Point3D>>,
-                             types_collections: Vec<Vec<&str>>,
-                             d: f64) -> Vec<f64> {
-    points_collections.into_par_iter().zip(types_collections).map(|(p, t)| {
-        leibovici_entropy_3d(p, t, d)
-    }).collect()
+pub fn leibovici_3d_parallel(
+    points_collections: Vec<Vec<Point3D>>,
+    types_collections: Vec<Vec<&str>>,
+    d: f64,
+) -> Vec<f64> {
+    points_collections
+        .into_par_iter()
+        .zip(types_collections)
+        .map(|(p, t)| leibovici_entropy_3d(p, t, d))
+        .collect()
 }
 
 #[pyfunction]
-pub fn altieri_parallel(points_collections: Vec<Vec<Point2D>>,
-                        types_collections: Vec<Vec<&str>>,
-                        cut: usize) -> Vec<f64> {
-    points_collections.into_par_iter().zip(types_collections).map(|(p, t)| {
-        altieri_entropy(p, t, cut)
-    }).collect()
+pub fn altieri_parallel(
+    points_collections: Vec<Vec<Point2D>>,
+    types_collections: Vec<Vec<&str>>,
+    cut: usize,
+) -> Vec<f64> {
+    points_collections
+        .into_par_iter()
+        .zip(types_collections)
+        .map(|(p, t)| altieri_entropy(p, t, cut))
+        .collect()
 }
 
 #[pyfunction]
-pub fn altieri_3d_parallel(points_collections: Vec<Vec<Point3D>>,
-                           types_collections: Vec<Vec<&str>>,
-                           cut: usize) -> Vec<f64> {
-    points_collections.into_par_iter().zip(types_collections).map(|(p, t)| {
-        altieri_entropy_3d(p, t, cut)
-    }).collect()
+pub fn altieri_3d_parallel(
+    points_collections: Vec<Vec<Point3D>>,
+    types_collections: Vec<Vec<&str>>,
+    cut: usize,
+) -> Vec<f64> {
+    points_collections
+        .into_par_iter()
+        .zip(types_collections)
+        .map(|(p, t)| altieri_entropy_3d(p, t, cut))
+        .collect()
 }
-
 
 pub fn leibovici_entropy(points: Vec<Point2D>, types: Vec<&str>, d: f64) -> f64 {
     let neighbors = points_neighbors_kdtree(points, (0..types.len()).collect(), d, 0);
@@ -81,7 +96,6 @@ fn leibovici_base(neighbors: Vec<Vec<usize>>, types: Vec<&str>) -> f64 {
     v.mapv(|i| i * (1.0 / i).log2()).sum()
 }
 
-
 pub fn altieri_entropy(points: Vec<Point2D>, types: Vec<&str>, cut: usize) -> f64 {
     let pdist = pdist(points);
     altieri_base(pdist, types, cut)
@@ -91,7 +105,6 @@ pub fn altieri_entropy_3d(points: Vec<Point3D>, types: Vec<&str>, cut: usize) ->
     let pdist = pdist(points);
     altieri_base(pdist, types, cut)
 }
-
 
 fn altieri_base(pdist: Vec<OrderedFloat<f64>>, types: Vec<&str>, cut: usize) -> f64 {
     // let bbox = points_bbox(points.clone());
@@ -147,10 +160,15 @@ fn altieri_base(pdist: Vec<OrderedFloat<f64>>, types: Vec<&str>, cut: usize) -> 
         let elem = h_z.get_mut(i).unwrap();
         *elem = pc_v.mapv(|v| v * (1.0 / v).log2()).sum();
 
-        let v2: Array1<f64> = pc_v.iter().zip(&all_dist_paris_count).into_iter().map(|(v, z)| {
-            let v = *v;
-            v * (v / z).log2()
-        }).collect();
+        let v2: Array1<f64> = pc_v
+            .iter()
+            .zip(&all_dist_paris_count)
+            .into_iter()
+            .map(|(v, z)| {
+                let v = *v;
+                v * (v / z).log2()
+            })
+            .collect();
         let elem = pi_z.get_mut(i).unwrap();
         *elem = v2.sum();
     }
@@ -161,7 +179,8 @@ fn altieri_base(pdist: Vec<OrderedFloat<f64>>, types: Vec<&str>, cut: usize) -> 
 }
 
 fn norm_counter_values<T: Hash + Eq>(pairs: Vec<T>) -> Array1<f64> {
-    let v = pairs.into_iter()
+    let v = pairs
+        .into_iter()
         .collect::<Counter<T>>()
         .values()
         .map(|v| *v as f64)
@@ -175,11 +194,9 @@ fn square_euclidean<const K: usize>(p1: [f64; K], p2: [f64; K]) -> f64 {
     p1.into_iter()
         .zip(p2.into_iter())
         .into_iter()
-        .map(|(c1, c2)| {
-            (c1 - c2).powi(2)
-        }).sum()
+        .map(|(c1, c2)| (c1 - c2).powi(2))
+        .sum()
 }
-
 
 fn pdist<const K: usize>(x: Vec<[f64; K]>) -> Vec<OrderedFloat<f64>>
 // pairwise distance, skip all the self dist
@@ -210,7 +227,6 @@ fn pair_type(types: Vec<&str>) -> Vec<(&str, &str)> {
     }
     result
 }
-
 
 #[cfg(test)]
 mod tests {

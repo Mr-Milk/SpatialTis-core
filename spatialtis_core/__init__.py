@@ -2,12 +2,9 @@ from scipy.sparse import csr_matrix
 
 from .types import Neighbors, Labels
 from .spatial_de import somde
+from .spatialtis_core import build_neighbors_matrix
 # import rust module as naive function, document in .pyi
-from .spatialtis_core import (neighbor_components,
-                              build_neighbors_matrix,
-                              CellCombs,
-                              comb_bootstrap
-                              )
+from .cell_interaction import (neighbor_components, CellCombs, comb_bootstrap)
 
 # import python side function
 from .io import dumps_points_wkt, dumps_polygons_wkt, reads_wkt_points, reads_wkt_polygons
