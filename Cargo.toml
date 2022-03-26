@@ -48,7 +48,7 @@ name = "spatialtis_core"
 crate-type = ["cdylib"]
 
 [dependencies.numpy]
-version = "0.16.1"
+version = "0.16.2"
 
 [dependencies.pyo3]
 version = "0.16.1"
