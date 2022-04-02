@@ -17,6 +17,10 @@ pub(crate) fn register(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ix_dispersion_3d_parallel, m)?)?;
     m.add_function(wrap_pyfunction!(morisita_parallel, m)?)?;
     m.add_function(wrap_pyfunction!(clark_evans_parallel, m)?)?;
+    m.add_function(wrap_pyfunction!(ix_dispersion, m)?)?;
+    m.add_function(wrap_pyfunction!(ix_dispersion_3d, m)?)?;
+    m.add_function(wrap_pyfunction!(morisita_ix, m)?)?;
+    m.add_function(wrap_pyfunction!(clark_evans_ix, m)?)?;
     Ok(())
 }
 
@@ -89,6 +93,7 @@ pub fn clark_evans_parallel(
         .collect()
 }
 
+#[pyfunction]
 pub fn ix_dispersion(
     points: Vec<Point2D>,
     bbox: BBox,
@@ -130,6 +135,7 @@ pub fn ix_dispersion(
     };
 }
 
+#[pyfunction]
 pub fn ix_dispersion_3d(
     points: Vec<Point3D>,
     bbox: BBox3D,
@@ -172,6 +178,7 @@ pub fn ix_dispersion_3d(
     };
 }
 
+#[pyfunction]
 pub fn morisita_ix(
     points: Vec<Point2D>,
     bbox: BBox,
@@ -201,6 +208,7 @@ pub fn morisita_ix(
     };
 }
 
+#[pyfunction]
 pub fn clark_evans_ix(
     points: Vec<Point2D>,
     bbox: BBox,

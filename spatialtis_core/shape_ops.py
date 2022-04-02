@@ -2,7 +2,14 @@ from typing import List, Sequence
 
 import numpy as np
 
-from .spatialtis_core import _points_bbox, _multipoints_bbox, _polygon_area, _multipolygons_area, concave, convex
+from .spatialtis_core import (_points_bbox,
+                              _points3d_bbox,
+                              _multipoints_bbox,
+                              _multipoints3d_bbox,
+                              _polygon_area,
+                              _multipolygons_area,
+                              concave,
+                              convex)
 from .types import Points, BoundingBox
 from .utils import show_options
 
@@ -14,12 +21,15 @@ def points_bbox(points: Points) -> BoundingBox:
         points: A list of points
 
     Return:
-        The bounding box (minx, miny, maxx, maxy)
+        The bounding box (minx, miny, maxx, maxy) or (minx, miny, minz, maxx, maxy, maxz)
 
     """
     if isinstance(points, np.ndarray):
         points = points.tolist()
-    return _points_bbox(points)
+    if len(points[0]) == 2:
+        return _points_bbox(points)
+    else:
+        return _points3d_bbox(points)
 
 
 def multipoints_bbox(points_collections: Sequence[Points]) -> Sequence[BoundingBox]:
@@ -34,7 +44,10 @@ def multipoints_bbox(points_collections: Sequence[Points]) -> Sequence[BoundingB
     """
     if isinstance(points_collections, np.ndarray):
         points_collections = points_collections.tolist()
-    return _multipoints_bbox(points_collections)
+    if len(points_collections[0][0]) == 2:
+        return _multipoints_bbox(points_collections)
+    else:
+        return _multipoints3d_bbox(points_collections)
 
 
 def polygons_area(points: Points) -> float:

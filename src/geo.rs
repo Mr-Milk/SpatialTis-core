@@ -13,6 +13,7 @@ pub(crate) fn register(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(points_bbox, m)?)?;
     m.add_function(wrap_pyfunction!(points3d_bbox, m)?)?;
     m.add_function(wrap_pyfunction!(multipoints_bbox, m)?)?;
+    m.add_function(wrap_pyfunction!(multipoints3d_bbox, m)?)?;
     m.add_function(wrap_pyfunction!(polygon_area, m)?)?;
     m.add_function(wrap_pyfunction!(multipolygons_area, m)?)?;
     m.add_function(wrap_pyfunction!(concave, m)?)?;

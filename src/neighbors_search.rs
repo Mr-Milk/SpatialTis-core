@@ -4,6 +4,8 @@ use delaunator::{triangulate, Point};
 use kiddo::distance::squared_euclidean;
 use kiddo::KdTree;
 use pyo3::prelude::*;
+use rayon::prelude;
+use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use rstar::{RTree, RTreeObject, AABB};
 
 use crate::custom_type::{BBox, Point2D, Point3D};
@@ -13,6 +15,10 @@ pub(crate) fn register(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(points_neighbors_kdtree_3d, m)?)?;
     m.add_function(wrap_pyfunction!(points_neighbors_triangulation, m)?)?;
     m.add_function(wrap_pyfunction!(bbox_neighbors, m)?)?;
+    m.add_function(wrap_pyfunction!(points_neighbors_kdtree_parallel, m)?)?;
+    m.add_function(wrap_pyfunction!(points_neighbors_kdtree_3d_parallel, m)?)?;
+    m.add_function(wrap_pyfunction!(points_neighbors_triangulation_parallel, m)?)?;
+    m.add_function(wrap_pyfunction!(bbox_neighbors_parallel, m)?)?;
     Ok(())
 }
 
@@ -28,6 +34,21 @@ pub fn points_neighbors_kdtree(
 }
 
 #[pyfunction]
+pub fn points_neighbors_kdtree_parallel(
+    points_collections: Vec<Vec<Point2D>>,
+    labels_collections: Vec<Vec<usize>>,
+    r: f64,
+    k: usize,
+) -> Vec<Vec<Vec<usize>>> {
+    points_collections
+        .into_par_iter()
+        .zip(labels_collections)
+        .map(|(ps, ls)| {
+            points_neighbors_kdtree(ps, ls, r, k)
+        }).collect()
+}
+
+#[pyfunction]
 pub fn points_neighbors_kdtree_3d(
     points: Vec<Point3D>,
     labels: Vec<usize>,
@@ -36,6 +57,21 @@ pub fn points_neighbors_kdtree_3d(
 ) -> Vec<Vec<usize>> {
     let tree = kdtree_builder(&points, &labels);
     get_neighbors(tree, points, r, k)
+}
+
+#[pyfunction]
+pub fn points_neighbors_kdtree_3d_parallel(
+    points_collections: Vec<Vec<Point3D>>,
+    labels_collections: Vec<Vec<usize>>,
+    r: f64,
+    k: usize,
+) -> Vec<Vec<Vec<usize>>> {
+    points_collections
+        .into_par_iter()
+        .zip(labels_collections)
+        .map(|(ps, ls)| {
+            points_neighbors_kdtree_3d(ps, ls, r, k)
+        }).collect()
 }
 
 #[pyfunction]
@@ -66,6 +102,19 @@ pub fn points_neighbors_triangulation(points: Vec<Point2D>, labels: Vec<usize>) 
 }
 
 #[pyfunction]
+pub fn points_neighbors_triangulation_parallel(
+    points_collections: Vec<Vec<Point2D>>,
+    labels_collections: Vec<Vec<usize>>,
+) -> Vec<Vec<Vec<usize>>> {
+    points_collections
+        .into_par_iter()
+        .zip(labels_collections)
+        .map(|(ps, ls)| {
+            points_neighbors_triangulation(ps, ls)
+        }).collect()
+}
+
+#[pyfunction]
 #[pyo3(name = "bbox_neighbors_rtree")]
 pub fn bbox_neighbors(
     bbox: Vec<BBox>,
@@ -74,6 +123,23 @@ pub fn bbox_neighbors(
     scale: f64,
 ) -> Vec<Vec<usize>> {
     bbox_neighbors_rtree(init_bbox(bbox, labels), expand, scale)
+}
+
+
+#[pyfunction]
+#[pyo3(name = "bbox_neighbors_rtree_parallel")]
+pub fn bbox_neighbors_parallel(
+    bbox_collections: Vec<Vec<BBox>>,
+    labels_collections: Vec<Vec<usize>>,
+    expand: f64,
+    scale: f64,
+) -> Vec<Vec<Vec<usize>>> {
+    bbox_collections
+        .into_par_iter()
+        .zip(labels_collections)
+        .map(|(bx, ls)| {
+            bbox_neighbors(bx, ls, expand, scale)
+        }).collect()
 }
 
 // Build a kdtree using kiddo with labels

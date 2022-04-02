@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use counter::Counter;
 use itertools::Itertools;
-use ndarray::{s, ArrayView2};
+use ndarray::{ArrayView2, s};
 use numpy::PyReadonlyArray2;
 use pyo3::prelude::*;
 use rand::seq::SliceRandom;
@@ -25,11 +25,10 @@ pub fn comb_bootstrap(
     neighbors: Vec<Vec<usize>>,
     labels: Vec<usize>,
     pval: f64,
-    order: bool,
     times: usize,
 ) -> Result<PyObject, PyErr> {
     let exp_matrix: ArrayView2<bool> = exp_matrix.as_array();
-    let neighbors = remove_rep_neighbors(neighbors, &labels);
+    // let neighbors = remove_rep_neighbors(neighbors, &labels);
     let size = labels.len();
     let labels_mapper: HashMap<usize, usize> =
         labels.into_iter().zip(0..size).into_iter().collect();
@@ -37,8 +36,10 @@ pub fn comb_bootstrap(
     for comb in (0..markers.len()).combinations_with_replacement(2) {
         let x_status = exp_matrix.slice(s![comb[0], ..]).to_vec();
         let y_status = exp_matrix.slice(s![comb[1], ..]).to_vec();
+        let m1 = markers[comb[0]];
+        let m2 = markers[comb[1]];
         // println!("{:?} {:?}", markers[comb[0]], markers[comb[1]]);
-        let p = xy_comb(
+        let p1 = xy_comb(
             &x_status,
             &y_status,
             &neighbors,
@@ -46,19 +47,19 @@ pub fn comb_bootstrap(
             times,
             pval,
         );
-        results.push((markers[comb[0]], markers[comb[1]], p));
-        if order {
-            let p_ = xy_comb(
-                &y_status,
+        results.push((m1, m2, p1));
+        if m1 == m2 {
+            results.push((m2, m1, p1));
+        } else {
+            let p2 = xy_comb(
                 &x_status,
+                &y_status,
                 &neighbors,
                 &labels_mapper,
                 times,
                 pval,
             );
-            results.push((markers[comb[1]], markers[comb[0]], p_));
-        } else {
-            results.push((markers[comb[1]], markers[comb[0]], p));
+            results.push((m2, m1, p2));
         }
     }
 
@@ -172,19 +173,19 @@ impl CellCombs {
         let times = py_kwarg(times, 1000);
         let pval = py_kwarg(pval, 0.05);
         let method = py_kwarg(method, "pval");
-        // let ignore_self = py_kwarg(ignore_self, true);
+        //let ignore_self = py_kwarg(ignore_self, true);
         let type_counts: HashMap<&str, usize> = types
             .to_owned()
             .into_iter()
             .collect::<Counter<_>>()
             .into_map();
 
-        let unique_neighbors = remove_rep_neighbors(neighbors, &labels);
+        // let unique_neighbors = remove_rep_neighbors(neighbors, &labels);
         let real_data = count_neighbors(
             &types,
             &labels,
             real_storage,
-            &unique_neighbors,
+            &neighbors,
             &type_counts,
         );
 
@@ -200,7 +201,7 @@ impl CellCombs {
                     &shuffle_types,
                     &labels,
                     real_storage,
-                    &unique_neighbors,
+                    &neighbors,
                     &type_counts,
                 );
                 perm_result
@@ -216,41 +217,52 @@ impl CellCombs {
         let mut results: Vec<(&str, &str, f64, f64)> = Vec::with_capacity(simulate_data.len());
 
         for (k, v) in simulate_data.into_iter() {
-            let real = real_data[&k];
-
-            if method == "pval" {
-                let mut gt: f64 = 0.0;
-                let mut lt: f64 = 0.0;
-                for i in v.iter() {
-                    if i >= &real {
-                        gt += 1.0
-                    }
-                    if i <= &real {
-                        lt += 1.0
+            match real_data.get(&k) {
+                // The relationship exists
+                Some(real) => {
+                    if method == "pval" {
+                        let mut gt: f64 = 0.0;
+                        let mut lt: f64 = 0.0;
+                        for i in v.iter() {
+                            if i >= &real {
+                                gt += 1.0
+                            }
+                            if i <= &real {
+                                lt += 1.0
+                            }
+                        }
+                        let gt: f64 = gt / (times.to_owned() as f64 + 1.0);
+                        let lt: f64 = lt / (times.to_owned() as f64 + 1.0);
+                        let mut dir: f64 = 0.0;
+                        let mut udir: f64 = 0.0;
+                        if gt < lt {
+                            dir = 1.0;
+                        } else {
+                            udir = 1.0;
+                        }
+                        let p: f64 = gt * dir + lt * udir;
+                        let sig: f64 = (p < pval) as i32 as f64;
+                        let sigv: f64 = sig * (dir - 0.5).signum();
+                        results.push((k.0, k.1, p, sigv));
+                    } else {
+                        let m = mean_f(&v);
+                        let sd = std_f(&v);
+                        // let mut p = 1.0;
+                        let mut z = 0.0;
+                        let sigv = if sd != 0.0 {
+                            z = (real - m) / sd;
+                            let p = zscore2pvalue(z, false);
+                            let dir: f64 = (z > 0.0) as i32 as f64;
+                            let sig: f64 = (p < pval) as i32 as f64;
+                            sig * (dir - 0.5).signum()
+                        } else {
+                            0.0
+                        };
+                        results.push((k.0, k.1, z, sigv));
                     }
                 }
-                let gt: f64 = gt / (times.to_owned() as f64 + 1.0);
-                let lt: f64 = lt / (times.to_owned() as f64 + 1.0);
-                let dir: f64 = (gt < lt) as i32 as f64;
-                let udir: f64 = -dir;
-                let p: f64 = gt * dir + lt * udir;
-                let sig: f64 = (p < pval) as i32 as f64;
-                let sigv: f64 = sig * (dir - 0.5).signum();
-                results.push((k.0, k.1, p, sigv));
-            } else {
-                let m = mean_f(&v);
-                let sd = std_f(&v);
-                let mut p = 1.0;
-                let sigv = if sd != 0.0 {
-                    let z = (real - m) / sd;
-                    p = zscore2pvalue(z, false);
-                    let dir: f64 = (z > 0.0) as i32 as f64;
-                    let sig: f64 = (p < pval) as i32 as f64;
-                    sig * (dir - 0.5).signum()
-                } else {
-                    0.0
-                };
-                results.push((k.0, k.1, p, sigv));
+                // Does not exist, no such cell type in the ROI
+                None => {results.push((k.0, k.1, 1.0, 0.0)); }
             }
         }
 
@@ -263,7 +275,7 @@ pub fn count_neighbors<'a>(
     types: &Vec<&'a str>,
     labels: &Vec<usize>,
     storage_ptr: &HashMap<(&'a str, &'a str), Vec<usize>>,
-    unique_neighbors: &Vec<Vec<usize>>,
+    neighbors: &Vec<Vec<usize>>,
     type_counts: &HashMap<&str, usize>,
 ) -> HashMap<(&'a str, &'a str), f64> {
     let mut storage = storage_ptr.clone();
@@ -273,7 +285,7 @@ pub fn count_neighbors<'a>(
         .into_iter()
         .map(|(label, tpy)| (*label, *tpy))
         .collect();
-    for (neigh, l) in unique_neighbors.iter().zip(labels).into_iter() {
+    for (neigh, l) in neighbors.iter().zip(labels).into_iter() {
         let cent_type = label_type_mapper.get(&l).unwrap();
         let neigh_type: Counter<_> = neigh
             .iter()
@@ -284,14 +296,20 @@ pub fn count_neighbors<'a>(
             storage.get_mut(&comb).unwrap().push(*count)
         }
     }
-    let result: HashMap<(&str, &str), f64> = storage
-        .into_iter()
-        .map(|(comb, dist)| {
-            let div_by = type_counts.get(comb.0).unwrap();
-            let avg = (dist.iter().sum::<usize>() as f64) / (*div_by as f64);
-            (comb, avg)
-        })
-        .collect();
+    let mut result: HashMap<(&str, &str), f64> = HashMap::new();
+    for (comb, dist) in storage {
+        //get the number of center type
+        match type_counts.get(comb.0) {
+            Some(v) => {
+                let avg = (dist.iter().sum::<usize>() as f64) / (*v as f64);
+                result.insert(comb, avg);
+            }
+            None => {}
+        }
+        // let avg = (dist.iter().sum::<usize>() as f64) / (dist.len() as f64);
+        // result.insert(comb, avg);
+
+    }
     result
 }
 

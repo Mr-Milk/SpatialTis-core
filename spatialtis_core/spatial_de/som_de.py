@@ -3,7 +3,7 @@ from typing import List, Union
 import numpy as np
 import pandas as pd
 
-from spatialtis_core.external import SomNode
+from ..external import SomNode
 
 
 def somde(exp: pd.DataFrame,
