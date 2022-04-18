@@ -29,7 +29,7 @@ rayon = "1.5.1"
 kiddo = "0.2.4"
 rstar = "0.9.2"
 delaunator = "1.0.1"
-geo = "0.19.0"
+geo = "0.20.0"
 counter = "0.5.3"
 ordered-float = "2.10.0"
 ndarray = { version = "0.15.4", features =['rayon'] }
