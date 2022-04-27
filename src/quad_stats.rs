@@ -24,7 +24,8 @@ impl QuadStats {
         bbox: Option<BBox>,
         quad: Option<(usize, usize)>,
         rect_side: Option<(f64, f64)>,
-    ) -> HashMap<usize, usize> {
+    ) -> HashMap<usize, usize>
+    {
         let points_bbox = points_bbox(points.to_owned());
         let bbox = match bbox {
             Some(data) => {

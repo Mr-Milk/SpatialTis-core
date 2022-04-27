@@ -5,6 +5,7 @@ use geo::algorithm::convex_hull::ConvexHull;
 use geo::algorithm::coords_iter::CoordsIter;
 use geo::{LineString, Polygon};
 use pyo3::prelude::*;
+use rayon::prelude::*;
 use rstar::AABB;
 
 use crate::custom_type::{BBox, BBox3D, Point2D, Point3D};
@@ -18,6 +19,8 @@ pub(crate) fn register(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(multipolygons_area, m)?)?;
     m.add_function(wrap_pyfunction!(concave, m)?)?;
     m.add_function(wrap_pyfunction!(convex, m)?)?;
+    m.add_function(wrap_pyfunction!(multipolygons_concave, m)?)?;
+    m.add_function(wrap_pyfunction!(multipolygons_convex, m)?)?;
     Ok(())
 }
 
@@ -89,10 +92,20 @@ pub fn concave(p: Vec<Point2D>, concavity: f64) -> Vec<Point2D> {
 }
 
 #[pyfunction]
+pub fn multipolygons_concave(polygons: Vec<Vec<Point2D>>, concavity: f64) -> Vec<Vec<Point2D>> {
+    polygons.into_par_iter().map(|p| concave(p, concavity)).collect()
+}
+
+#[pyfunction]
 pub fn convex(p: Vec<Point2D>) -> Vec<Point2D> {
     let line_string: LineString<f64> = p.into();
     let res = line_string.convex_hull();
     res.exterior_coords_iter()
         .map(|coord| [coord.x, coord.y])
         .collect()
+}
+
+#[pyfunction]
+pub fn multipolygons_convex(polygons: Vec<Vec<Point2D>>) -> Vec<Vec<Point2D>> {
+    polygons.into_par_iter().map(|p| convex(p)).collect()
 }

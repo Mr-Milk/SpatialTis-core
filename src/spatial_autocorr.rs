@@ -28,7 +28,7 @@ pub fn moran_i_parallel(
     let w = SpatialWeight::from_neighbors(neighbors, labels);
     x.outer_iter()
         .into_par_iter()
-        .map(|row| moran_i_index(row, w.clone(), two_tailed, pval))
+        .map(|row| moran_i_index(row, &w, two_tailed, pval))
         .collect()
 }
 
@@ -43,7 +43,7 @@ pub fn geary_c_parallel(
     let w = SpatialWeight::from_neighbors(neighbors, labels);
     x.outer_iter()
         .into_par_iter()
-        .map(|row| geary_c_index(row, w.clone(), pval))
+        .map(|row| geary_c_index(row, &w, pval))
         .collect()
 }
 
@@ -148,7 +148,7 @@ impl SpatialWeight {
 
 pub fn moran_i_index(
     x: ArrayView1<f64>,
-    w: SpatialWeight,
+    w: &SpatialWeight,
     two_tailed: bool,
     pval: f64,
 ) -> (f64, f64, f64) {
@@ -182,7 +182,7 @@ pub fn moran_i_index(
     (pattern, i_value, p_norm)
 }
 
-pub fn geary_c_index(x: ArrayView1<f64>, w: SpatialWeight, pval: f64) -> (f64, f64, f64) {
+pub fn geary_c_index(x: ArrayView1<f64>, w: &SpatialWeight, pval: f64) -> (f64, f64, f64) {
     let n: f64 = x.len() as f64;
     let s1 = w.s1;
     let s2 = w.s2;

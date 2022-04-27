@@ -1,6 +1,7 @@
 from typing import List, Sequence
 
 import numpy as np
+import pandas as pd
 
 from .spatialtis_core import (_points_bbox,
                               _points3d_bbox,
@@ -8,6 +9,8 @@ from .spatialtis_core import (_points_bbox,
                               _multipoints3d_bbox,
                               _polygon_area,
                               _multipolygons_area,
+                              multipolygons_concave,
+                              multipolygons_convex,
                               concave,
                               convex)
 from .types import Points, BoundingBox
@@ -80,11 +83,11 @@ def multipolygons_area(points_collections: Sequence[Points]) -> Sequence[float]:
     return _multipolygons_area(points_collections)
 
 
-def points_shapes(points: Points, method: str = "convex", concavity: float = 1.5) -> Points:
+def points_shapes(polygons: List[Points], method: str = "convex", concavity: float = 1.5) -> Points:
     """Acquire multipoints (shapes) that describe the points
 
     Args:
-        points: A list of points
+        polygons: A list of polygons
         method: "convex" or "concave"
         concavity: Determine the concavity in concave hull
 
@@ -92,13 +95,13 @@ def points_shapes(points: Points, method: str = "convex", concavity: float = 1.5
         A list of points
 
     """
-    if isinstance(points, np.ndarray):
-        points = points.tolist()
+    if isinstance(polygons, (np.ndarray, pd.Series)):
+        polygons = polygons.tolist()
 
     if method == "concave":
-        return concave(points, concavity)
+        return multipolygons_concave(polygons, concavity)
     elif method == "convex":
-        return convex(points)
+        return multipolygons_convex(polygons)
     else:
         msg = show_options(method, ["concave", "convex"])
         raise ValueError(msg)

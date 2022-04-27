@@ -3,7 +3,7 @@ from scipy.sparse import csr_matrix
 from .types import Neighbors, Labels
 from .spatial_de import somde
 from .spatialtis_core import build_neighbors_matrix
-# import rust module as naive function, document in .pyi
+# import rust mod as naive function, document in .pyi
 from .cell_interaction import (neighbor_components, CellCombs, comb_bootstrap)
 
 # import python side function
