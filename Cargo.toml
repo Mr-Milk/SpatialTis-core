@@ -38,7 +38,7 @@ num-traits = "0.2.14"
 statrs = "0.15.0"
 permutation = "0.4.0"
 wkt = "0.10.0"
-nalgebra-sparse = "0.6.0"
+nalgebra-sparse = "0.7.0"
 
 [profile.dev]
 opt-level = 3
