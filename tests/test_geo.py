@@ -25,12 +25,14 @@ def test_multipolygons_area():
 
 
 def test_points_shapes_convex():
-    shape = points_shapes(points)
+    shape = points_shapes([points])
+    shape = shape[0]
     for i in shape:
         assert i in rect
 
 
 def test_points_shapes_concave():
-    shape = points_shapes(points, method="concave")
+    shape = points_shapes([points], method="concave")
+    shape = shape[0]
     for i in shape:
         assert i in rect
