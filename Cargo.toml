@@ -51,7 +51,7 @@ crate-type = ["cdylib"]
 version = "0.16.2"
 
 [dependencies.pyo3]
-version = "0.16.2"
+version = "0.16.5"
 features = ["extension-module"]
 
 [target.x86_64-apple-darwin]
