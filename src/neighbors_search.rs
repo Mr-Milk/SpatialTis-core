@@ -4,7 +4,6 @@ use delaunator::{triangulate, Point};
 use kiddo::distance::squared_euclidean;
 use kiddo::KdTree;
 use pyo3::prelude::*;
-use rayon::prelude;
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use rstar::{RTree, RTreeObject, AABB};
 
@@ -81,16 +80,21 @@ pub fn points_neighbors_triangulation(points: Vec<Point2D>, labels: Vec<usize>) 
         .map(|p| Point { x: p[0], y: p[1] })
         .collect();
     let result = triangulate(&points).triangles;
-    let mut neighbors: Vec<HashSet<usize>> = (0..labels.len())
-        .into_iter()
-        .map(|_| HashSet::new())
+    let mut neighbors: Vec<HashSet<usize>> = labels
+        .iter()
+        .map(|i| {
+            let mut neighbors_set = HashSet::new();
+            // To ensure that the neighbor contains at least itself
+            neighbors_set.insert(*i);
+            neighbors_set
+        })
         .collect();
 
     (0..result.len()).into_iter().step_by(3).for_each(|i| {
         let slice = vec![result[i], result[i + 1], result[i + 2]];
         for p1 in &slice {
             for p2 in &slice {
-                neighbors[*p1].insert(*p2);
+                neighbors[*p1].insert(labels[*p2]);
             }
         }
     });
