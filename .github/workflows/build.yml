@@ -27,7 +27,7 @@ jobs:
           profile: minimal
           default: true
       - name: Build wheels - x86_64
-        uses: messense/maturin-action@v1
+        uses: messense/maturin-action@v1.27.0
         with:
           target: x86_64-apple-darwin
           args: -i python --release --out dist
