@@ -22,7 +22,7 @@ def test_kd_tree_search_k():
 
 
 def test_kd_tree_search_k_and_r():
-    neighbors = points_neighbors(points, labels, r=1.1, k=3, method="kdtree")
+    neighbors = points_neighbors(points, labels, r=10, k=3, method="kdtree")
     results = [[0, 1, 3], [0, 1, 2], [1, 2, 3], [0, 2, 3]]
     for n, r in zip(neighbors, results):
         assert set(n) == set(r)
