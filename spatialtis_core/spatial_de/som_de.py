@@ -3,7 +3,7 @@ from typing import List, Union
 import numpy as np
 import pandas as pd
 
-from ..external import SomNode
+from .somde import SomNode
 
 
 def somde(exp: pd.DataFrame,
