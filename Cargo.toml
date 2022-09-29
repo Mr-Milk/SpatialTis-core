@@ -1,6 +1,6 @@
 [package]
 name = "spatialtis_core"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["Milk <zym.zym1220@gmail.com>"]
 edition = "2021"
 
@@ -25,11 +25,12 @@ classifier = [
 itertools = "0.10.3"
 itertools-num = "0.1.3"
 rand = "0.8.5"
+rand_chacha = "0.3.1"
 rayon = "1.5.3"
 kiddo = "0.2.4"
 rstar = "0.9.3"
 delaunator = "1.0.1"
-geo = "0.19.0"
+geo = "0.23.0"
 counter = "0.5.5"
 ordered-float = "3.0.0"
 ndarray = { version = "0.15.4", features =['rayon'] }
@@ -48,10 +49,10 @@ name = "spatialtis_core"
 crate-type = ["cdylib"]
 
 [dependencies.numpy]
-version = "0.16.2"
+version = "0.17.0"
 
 [dependencies.pyo3]
-version = "0.16.5"
+version = "0.17.0"
 features = ["extension-module"]
 
 [target.x86_64-apple-darwin]
