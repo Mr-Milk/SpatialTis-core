@@ -5,8 +5,7 @@ use itertools::Itertools;
 use ndarray::{ArrayView2, s};
 use numpy::PyReadonlyArray2;
 use pyo3::prelude::*;
-use rand::seq::SliceRandom;
-use rand::thread_rng;
+use rand::prelude::*;
 use rayon::prelude::*;
 
 use crate::{mean_f, mean_u, py_kwarg, std_f, std_u, zscore2pvalue};
@@ -77,8 +76,8 @@ fn xy_comb(
     let real: f64 = comb_count_neighbors(x_status, y_status, &neighbors, labels_mapper) as f64;
     let perm_counts: Vec<usize> = (0..times)
         .into_par_iter()
-        .map(|_| {
-            let mut rng = thread_rng();
+        .map(|i| {
+            let mut rng = StdRng::seed_from_u64(i as u64);
             let mut shuffle_y = y_status.to_owned();
             shuffle_y.shuffle(&mut rng);
             let perm_result = comb_count_neighbors(x_status, &shuffle_y, &neighbors, labels_mapper);
@@ -193,8 +192,8 @@ impl CellCombs {
 
         let all_data: Vec<HashMap<(&str, &str), f64>> = (0..times)
             .into_par_iter()
-            .map(|_| {
-                let mut rng = thread_rng();
+            .map(|i| {
+                let mut rng = StdRng::seed_from_u64(i as u64);
                 let mut shuffle_types = types.to_owned();
                 shuffle_types.shuffle(&mut rng);
                 let perm_result = count_neighbors(

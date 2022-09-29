@@ -2,7 +2,7 @@ use itertools::Itertools;
 use kiddo::distance::squared_euclidean;
 use ndarray::Array1;
 use pyo3::prelude::*;
-use rand::{thread_rng, Rng};
+use rand::prelude::*;
 use rayon::prelude::*;
 
 use crate::custom_type::{BBox, BBox3D, Point2D, Point3D};
@@ -11,6 +11,7 @@ use crate::quad_stats::QuadStats;
 use crate::utils::{chisquare2pvalue, zscore2pvalue};
 
 const EMPTY_RETURN: (f64, f64, usize) = (0.0, 0.0, 0);
+static SEED: u64 = 0;
 
 pub(crate) fn register(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(ix_dispersion_parallel, m)?)?;
@@ -110,7 +111,7 @@ pub fn ix_dispersion(
         let labels: Vec<usize> = (0..n).into_iter().collect();
         let tree = kdtree_builder(&points, &labels);
         let mut counts = vec![0.0; resample];
-        let mut rng = thread_rng();
+        let mut rng = StdRng::seed_from_u64(SEED);
         for i in 0..resample {
             let x: f64 = rng.gen_range(bbox.0..bbox.2);
             let y: f64 = rng.gen_range(bbox.1..bbox.3);
@@ -152,7 +153,7 @@ pub fn ix_dispersion_3d(
         let labels: Vec<usize> = (0..n).into_iter().collect();
         let tree = kdtree_builder(&points, &labels);
         let mut counts = vec![0.0; resample];
-        let mut rng = thread_rng();
+        let mut rng = StdRng::seed_from_u64(SEED);
         for i in 0..resample {
             let x: f64 = rng.gen_range(bbox.0..bbox.3);
             let y: f64 = rng.gen_range(bbox.1..bbox.4);
