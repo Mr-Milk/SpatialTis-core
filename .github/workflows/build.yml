@@ -80,7 +80,7 @@ jobs:
         uses: messense/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: -i python --release --out dist --no-sdist
+          args: -i python --release --out dist
       - name: Install built wheel
         run: |
           pip install spatialtis_core --no-index --find-links dist
@@ -121,7 +121,7 @@ jobs:
           rust-toolchain: stable
           target: ${{ matrix.target }}
           manylinux: auto
-          args: -i python${{ matrix.python-version }} --release --out dist --no-sdist
+          args: -i python${{ matrix.python-version }} --release --out dist
       - name: Install built wheel
         run: |
           pip install spatialtis_core --no-index --find-links dist
