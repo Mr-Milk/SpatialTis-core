@@ -49,10 +49,10 @@ name = "spatialtis_core"
 crate-type = ["cdylib"]
 
 [dependencies.numpy]
-version = "0.17.0"
+version = "0.17.1"
 
 [dependencies.pyo3]
-version = "0.17.0"
+version = "0.17.1"
 features = ["extension-module"]
 
 [target.x86_64-apple-darwin]
