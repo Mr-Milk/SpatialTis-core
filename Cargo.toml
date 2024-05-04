@@ -35,7 +35,7 @@ counter = "0.5.5"
 ordered-float = "3.0.0"
 ndarray = { version = "0.15.4", features =['rayon'] }
 ndarray-stats = "0.5.0"
-num-traits = "0.2.14"
+num-traits = "0.2.19"
 statrs = "0.15.0"
 permutation = "0.4.0"
 wkt = "0.10.1"
