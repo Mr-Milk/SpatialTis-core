@@ -31,7 +31,7 @@ kiddo = "0.2.4"
 rstar = "0.9.3"
 delaunator = "1.0.1"
 geo = "0.23.0"
-counter = "0.5.5"
+counter = "0.6.0"
 ordered-float = "3.0.0"
 ndarray = { version = "0.15.4", features =['rayon'] }
 ndarray-stats = "0.5.0"
